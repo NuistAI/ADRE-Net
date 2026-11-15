@@ -31,10 +31,13 @@ let rowMaps, colMaps;                   // Uint8Array
 let gtData;                             // ImageData.data for GT strip extraction
 let curDataset = 'nAMD';
 const DATASETS = {};                    // key -> {origImg, gtImg, rowMaps, colMaps, gtData}
-let curCol = DEFAULT_COL;
-let curRow = DEFAULT_ROW;
-let pinnedCol = DEFAULT_COL;
-let pinnedRow = DEFAULT_ROW;
+const AUTO_ANIM_S = 50;                         // 自动动正方形半边长
+const AUTO_ANIM_START_COL = DEFAULT_COL - AUTO_ANIM_S;  // 起始列(正方形左上角)
+const AUTO_ANIM_START_ROW = DEFAULT_ROW - AUTO_ANIM_S;  // 起始行(正方形左上角)
+let curCol = AUTO_ANIM_START_COL;
+let curRow = AUTO_ANIM_START_ROW;
+let pinnedCol = AUTO_ANIM_START_COL;
+let pinnedRow = AUTO_ANIM_START_ROW;
 let locked = false;   // 图1: 单击后锁定, 不再跟随鼠标
 let lockedCol = false; // 图3: 单击确定后锁定, 不再移动
 let lockedDepth = false; // 图4: 单击确定后锁定, 不再左右滑动
@@ -1105,7 +1108,7 @@ function startAutoAnim() {
   if (autoAnimStopped) return;
   const cx = DEFAULT_COL;   // 正方形中心列
   const cy = DEFAULT_ROW;   // 正方形中心行
-  const s = 50;             // 半边长 (小正方形)
+  const s = AUTO_ANIM_S;    // 半边长 (小正方形)
   const perim = 8 * s;      // 周长
   const half = perim / 2;   // 半个周长
   let p = 0;                // 累计沿周长位置
