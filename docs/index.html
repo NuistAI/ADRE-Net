@@ -242,6 +242,31 @@
 
   <!-- 主标题 + 子小节标题 -->
   <h2 class="main-title">Interactive Visualization</h2>
+
+  <div class="sub" style="display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <span>💡 <strong>Tip:</strong></span>
+
+    <span style="display: inline-flex; align-items: center; gap: 4px;">
+      <!-- 悬停图标 (小手) -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      Hover to explore
+    </span>
+    <span>·</span>
+
+    <span style="display: inline-flex; align-items: center; gap: 4px;">
+      <!-- 鼠标点击图标 -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7"></rect><path d="M12 2v6"></path><path d="M5 10h14"></path></svg>
+      Click to fix position
+    </span>
+    <span>·</span>
+
+    <span style="display: inline-flex; align-items: center; gap: 4px;">
+      <!-- 恢复图标 -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+      Re-enter to resume
+    </span>
+  </div>
+
   <!-- 水平(列间)注意力小节 -->
   <h2 class="section-title" id="hTitle">Label-Guided Inter-Column Horizontal Self-Attention (IHSA)</h2>
   <div id="hmain">
@@ -334,30 +359,6 @@
   <div id="hLegend"></div>
 
   <h2 class="section-title" id="vTitle">Label-Guided Intra-column Vertical Self-Attention (IVSA)</h2>
-
-  <div class="sub" style="display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <span>💡 <strong>Tip:</strong></span>
-
-    <span style="display: inline-flex; align-items: center; gap: 4px;">
-      <!-- 悬停图标 (小手) -->
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-      Hover to explore
-    </span>
-    <span>·</span>
-
-    <span style="display: inline-flex; align-items: center; gap: 4px;">
-      <!-- 鼠标点击图标 -->
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7"></rect><path d="M12 2v6"></path><path d="M5 10h14"></path></svg>
-      Click to fix position
-    </span>
-    <span>·</span>
-
-    <span style="display: inline-flex; align-items: center; gap: 4px;">
-      <!-- 恢复图标 -->
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-      Re-enter to resume
-    </span>
-  </div>
 
   <!-- 原有的可视化演示区 -->
   <div id="main">
