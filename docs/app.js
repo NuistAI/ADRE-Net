@@ -1208,10 +1208,8 @@ async function init() {
   // 懒加载: 只先加载默认数据集 (dme)
   await setDataset('dme');
 
-  // 自动动: 锚点自动扫动, 每半个周长切换样本; 鼠标首次进入即停止
-  startAutoAnim();
-  ensureDataset('nAMD').catch(() => {});
-  ensureDataset('normal').catch(() => {});
+  // 自动动: 3 秒后开始, 优先保证首个样本快速加载; 鼠标首次进入即停止
+  setTimeout(startAutoAnim, 3000);
   [origCanvas, gtCanvas, colCanvas, depthCanvas,
    document.getElementById('thumbD'), document.getElementById('thumbN'), document.getElementById('thumbH')
   ].forEach(el => el.addEventListener('mouseenter', stopAutoAnim));
@@ -1227,8 +1225,8 @@ async function init() {
     // 懒加载: 只先加载默认数据集 (dme)
     await setHDataset('dme');
 
-    // 自动动: 选中列左右扫动, 鼠标首次进入即停止
-    startHAutoAnim();
+    // 自动动: 3 秒后开始
+    setTimeout(startHAutoAnim, 3000);
     [hcmsOrigCanvas, hcmsGtCanvas, hAttnCanvas, hSpatialCanvas].forEach(c => c.addEventListener('mouseenter', stopHAutoAnim));
 
     hcmsOrigCanvas.addEventListener('mousemove', onHCol);
