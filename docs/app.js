@@ -1202,6 +1202,55 @@ function startHAutoAnim() {
   hAutoAnimRAF = requestAnimationFrame(step);
 }
 
+// 水平(IHSA)小节初始化: 绑定交互 + 启动自动动 (IHSA 数据加载完成后立即调用, 不等 IVSA)
+function setupHorizontalSection() {
+  setTimeout(startHAutoAnim, 1000);
+  [hcmsOrigCanvas, hcmsGtCanvas, hAttnCanvas, hSpatialCanvas].forEach(c => c.addEventListener('mouseenter', stopHAutoAnim));
+
+  hcmsOrigCanvas.addEventListener('mousemove', onHCol);
+  hcmsOrigCanvas.addEventListener('click', onHColPin);
+  hcmsOrigCanvas.addEventListener('mouseleave', onHColLeave);
+  hcmsOrigCanvas.addEventListener('mouseenter', onHColEnter);
+  hcmsOrigCanvas.addEventListener('mouseenter', () => { hOrigHovered = true; renderHCol(); });
+  hcmsOrigCanvas.addEventListener('mouseleave', () => { hOrigHovered = false; renderHCol(); });
+  hcmsOrigCanvas.addEventListener('mouseenter', () => { document.getElementById('hcmsOrigMouseIcon').classList.add('show'); });
+  hcmsOrigCanvas.addEventListener('mouseleave', () => { document.getElementById('hcmsOrigMouseIcon').classList.remove('show'); });
+
+  hcmsGtCanvas.addEventListener('mousemove', onHColGtMove);
+  hcmsGtCanvas.addEventListener('click', onHColPin);
+  hcmsGtCanvas.addEventListener('mouseleave', onHColLeave);
+  hcmsGtCanvas.addEventListener('mouseenter', onHColEnter);
+  hcmsGtCanvas.addEventListener('mouseenter', () => { hGtHovered = true; renderHCol(); });
+  hcmsGtCanvas.addEventListener('mouseleave', () => { hGtHovered = false; renderHCol(); });
+  hcmsGtCanvas.addEventListener('mouseenter', () => { document.getElementById('hcmsGtMouseIcon').classList.add('show'); });
+  hcmsGtCanvas.addEventListener('mouseleave', () => { document.getElementById('hcmsGtMouseIcon').classList.remove('show'); });
+
+  hAttnCanvas.addEventListener('mousemove', onHAttnMove);
+  hAttnCanvas.addEventListener('click', onHAttnPin);
+  hAttnCanvas.addEventListener('mouseleave', onHColLeave);
+  hAttnCanvas.addEventListener('mouseenter', onHColEnter);
+  hAttnCanvas.addEventListener('mouseenter', () => { hAttnHovered = true; renderHCol(); });
+  hAttnCanvas.addEventListener('mouseleave', () => { hAttnHovered = false; renderHCol(); });
+  hAttnCanvas.addEventListener('mouseenter', () => { document.getElementById('hAttnMouseIcon').classList.add('show'); });
+  hAttnCanvas.addEventListener('mouseleave', () => { document.getElementById('hAttnMouseIcon').classList.remove('show'); });
+
+  hSpatialCanvas.addEventListener('mousemove', onHCol);
+  hSpatialCanvas.addEventListener('click', onHColPin);
+  hSpatialCanvas.addEventListener('mouseleave', onHColLeave);
+  hSpatialCanvas.addEventListener('mouseenter', onHColEnter);
+  hSpatialCanvas.addEventListener('mouseenter', () => { hSpatialHovered = true; renderHCol(); });
+  hSpatialCanvas.addEventListener('mouseleave', () => { hSpatialHovered = false; renderHCol(); });
+  hSpatialCanvas.addEventListener('mouseenter', () => { document.getElementById('hSpatialMouseIcon').classList.add('show'); });
+  hSpatialCanvas.addEventListener('mouseleave', () => { document.getElementById('hSpatialMouseIcon').classList.remove('show'); });
+
+  document.getElementById('hThumbD').addEventListener('click', () => setHDataset('dme'));
+  document.getElementById('hThumbN').addEventListener('click', () => setHDataset('nAMD'));
+  document.getElementById('hThumbH').addEventListener('click', () => setHDataset('normal'));
+  document.getElementById('hThumbD').addEventListener('mouseenter', () => setHDataset('dme'));
+  document.getElementById('hThumbN').addEventListener('mouseenter', () => setHDataset('nAMD'));
+  document.getElementById('hThumbH').addEventListener('mouseenter', () => setHDataset('normal'));
+}
+
 async function init() {
   // 起始点注意力图静态占位, 真实数据加载完成后替换
   colCanvas.style.backgroundImage = "url('static_col.png')";
@@ -1212,9 +1261,10 @@ async function init() {
   drawColorbar(cbCtx);
   drawColorbar(hCbCtx);
 
-  // 并行开始 IHSA 加载 (数据量小, 与 IVSA 同时进行, 避免等待)
-  const hLoadPromise = setHDataset('dme');
-  hLoadPromise.catch(() => {});
+  // 并行开始 IHSA 加载 (数据量小, 加载完立即启动, 不等 IVSA)
+  setHDataset('dme')
+    .then(setupHorizontalSection)
+    .catch(e => console.warn('horizontal section skipped:', e.message));
 
   // 渐进式加载 DME (IVSA): 并行加载原图/GT 与注意力数据, 先渲染原图/GT, 注意力数据就绪后再渲染完整
   const dOrigP = loadImage('dme_orig.png');
@@ -1253,59 +1303,6 @@ async function init() {
   document.getElementById('thumbD').addEventListener('mouseenter', () => setDataset('dme'));
   document.getElementById('thumbN').addEventListener('mouseenter', () => setDataset('nAMD'));
   document.getElementById('thumbH').addEventListener('mouseenter', () => setDataset('normal'));
-
-  try {
-    // 等待并行加载的 IHSA 数据 (此时大概率已就绪)
-    await hLoadPromise;
-
-    // 自动动: 1 秒后开始
-    setTimeout(startHAutoAnim, 1000);
-    [hcmsOrigCanvas, hcmsGtCanvas, hAttnCanvas, hSpatialCanvas].forEach(c => c.addEventListener('mouseenter', stopHAutoAnim));
-
-    hcmsOrigCanvas.addEventListener('mousemove', onHCol);
-    hcmsOrigCanvas.addEventListener('click', onHColPin);
-    hcmsOrigCanvas.addEventListener('mouseleave', onHColLeave);
-    hcmsOrigCanvas.addEventListener('mouseenter', onHColEnter);
-    hcmsOrigCanvas.addEventListener('mouseenter', () => { hOrigHovered = true; renderHCol(); });
-    hcmsOrigCanvas.addEventListener('mouseleave', () => { hOrigHovered = false; renderHCol(); });
-    hcmsOrigCanvas.addEventListener('mouseenter', () => { document.getElementById('hcmsOrigMouseIcon').classList.add('show'); });
-    hcmsOrigCanvas.addEventListener('mouseleave', () => { document.getElementById('hcmsOrigMouseIcon').classList.remove('show'); });
-
-    hcmsGtCanvas.addEventListener('mousemove', onHColGtMove);
-    hcmsGtCanvas.addEventListener('click', onHColPin);
-    hcmsGtCanvas.addEventListener('mouseleave', onHColLeave);
-    hcmsGtCanvas.addEventListener('mouseenter', onHColEnter);
-    hcmsGtCanvas.addEventListener('mouseenter', () => { hGtHovered = true; renderHCol(); });
-    hcmsGtCanvas.addEventListener('mouseleave', () => { hGtHovered = false; renderHCol(); });
-    hcmsGtCanvas.addEventListener('mouseenter', () => { document.getElementById('hcmsGtMouseIcon').classList.add('show'); });
-    hcmsGtCanvas.addEventListener('mouseleave', () => { document.getElementById('hcmsGtMouseIcon').classList.remove('show'); });
-
-    hAttnCanvas.addEventListener('mousemove', onHAttnMove);
-    hAttnCanvas.addEventListener('click', onHAttnPin);
-    hAttnCanvas.addEventListener('mouseleave', onHColLeave);
-    hAttnCanvas.addEventListener('mouseenter', onHColEnter);
-    hAttnCanvas.addEventListener('mouseenter', () => { hAttnHovered = true; renderHCol(); });
-    hAttnCanvas.addEventListener('mouseleave', () => { hAttnHovered = false; renderHCol(); });
-    hAttnCanvas.addEventListener('mouseenter', () => { document.getElementById('hAttnMouseIcon').classList.add('show'); });
-    hAttnCanvas.addEventListener('mouseleave', () => { document.getElementById('hAttnMouseIcon').classList.remove('show'); });
-
-    hSpatialCanvas.addEventListener('mousemove', onHCol);
-    hSpatialCanvas.addEventListener('click', onHColPin);
-    hSpatialCanvas.addEventListener('mouseleave', onHColLeave);
-    hSpatialCanvas.addEventListener('mouseenter', onHColEnter);
-    hSpatialCanvas.addEventListener('mouseenter', () => { hSpatialHovered = true; renderHCol(); });
-    hSpatialCanvas.addEventListener('mouseleave', () => { hSpatialHovered = false; renderHCol(); });
-    hSpatialCanvas.addEventListener('mouseenter', () => { document.getElementById('hSpatialMouseIcon').classList.add('show'); });
-    hSpatialCanvas.addEventListener('mouseleave', () => { document.getElementById('hSpatialMouseIcon').classList.remove('show'); });
-    document.getElementById('hThumbD').addEventListener('click', () => setHDataset('dme'));
-    document.getElementById('hThumbN').addEventListener('click', () => setHDataset('nAMD'));
-    document.getElementById('hThumbH').addEventListener('click', () => setHDataset('normal'));
-    document.getElementById('hThumbD').addEventListener('mouseenter', () => setHDataset('dme'));
-    document.getElementById('hThumbN').addEventListener('mouseenter', () => setHDataset('nAMD'));
-    document.getElementById('hThumbH').addEventListener('mouseenter', () => setHDataset('normal'));
-  } catch (e) {
-    console.warn('horizontal section skipped:', e.message);
-  }
 
   origCanvas.addEventListener('mousemove', onHover);
   origCanvas.addEventListener('click', onPin);
