@@ -1109,14 +1109,13 @@ function startAutoAnim() {
   const perim = 8 * s;      // 周长
   const half = perim / 2;   // 半个周长
   let p = 0;                // 累计沿周长位置
-  let halfCount = 0;        // 已走过的半周长段数
+  let nextSwitchAt = 2 * perim;   // 先在 DME 上转满 2 圈再切换
   const step = () => {
     if (autoAnimStopped) return;
     p += 1;
-    const hc = Math.floor(p / half);
-    if (hc !== halfCount) {
-      halfCount = hc;
-      autoAdvanceDataset();   // 每走半个周长, 若未介入则换下一个样本
+    if (p >= nextSwitchAt) {
+      nextSwitchAt += half;        // 之后每转半圈切换一次
+      autoAdvanceDataset();
     }
     const r = p % perim;
     let col, row;
@@ -1208,8 +1207,8 @@ async function init() {
   // 懒加载: 只先加载默认数据集 (dme)
   await setDataset('dme');
 
-  // 自动动: 3 秒后开始, 优先保证首个样本快速加载; 鼠标首次进入即停止
-  setTimeout(startAutoAnim, 3000);
+  // 自动动: 静态 1 秒后开始, 优先保证首个样本快速加载; 鼠标首次进入即停止
+  setTimeout(startAutoAnim, 1000);
   [origCanvas, gtCanvas, colCanvas, depthCanvas,
    document.getElementById('thumbD'), document.getElementById('thumbN'), document.getElementById('thumbH')
   ].forEach(el => el.addEventListener('mouseenter', stopAutoAnim));
