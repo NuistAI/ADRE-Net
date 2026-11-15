@@ -1069,6 +1069,32 @@ function ensureHDataset(key) {
 let autoAnimStopped = false;
 let autoAnimRAF = null;
 
+const AUTO_DATASETS = ['dme', 'nAMD', 'normal'];
+let autoDatasetIdx = 0;      // 当前显示的样本 (dme)
+let autoSwitching = false;
+
+// 换到下一个样本 (不重置锚点位置, 动画继续)
+async function autoAdvanceDataset() {
+  if (autoSwitching || autoAnimStopped) return;
+  autoSwitching = true;
+  try {
+    autoDatasetIdx = (autoDatasetIdx + 1) % AUTO_DATASETS.length;
+    const key = AUTO_DATASETS[autoDatasetIdx];
+    const d = await ensureDataset(key);
+    if (autoAnimStopped) return;
+    origImg = d.origImg; gtImg = d.gtImg; rowMaps = d.rowMaps; colMaps = d.colMaps; gtData = d.gtData;
+    curDataset = key;
+    document.getElementById('thumbD').classList.toggle('active', key === 'dme');
+    document.getElementById('thumbN').classList.toggle('active', key === 'nAMD');
+    document.getElementById('thumbH').classList.toggle('active', key === 'normal');
+    buildLegend(legendFor(key));
+  } catch (e) {
+    console.warn('auto advance failed:', e.message);
+  } finally {
+    autoSwitching = false;
+  }
+}
+
 function stopAutoAnim() {
   if (autoAnimStopped) return;
   autoAnimStopped = true;
@@ -1081,9 +1107,17 @@ function startAutoAnim() {
   const cy = DEFAULT_ROW;   // 正方形中心行
   const s = 50;             // 半边长 (小正方形)
   const perim = 8 * s;      // 周长
-  let p = 0;                // 沿周长位置 (顺时针: 上边右→右边下→下边左→左边上)
+  const half = perim / 2;   // 半个周长
+  let p = 0;                // 累计沿周长位置
+  let halfCount = 0;        // 已走过的半周长段数
   const step = () => {
     if (autoAnimStopped) return;
+    p += 1;
+    const hc = Math.floor(p / half);
+    if (hc !== halfCount) {
+      halfCount = hc;
+      autoAdvanceDataset();   // 每走半个周长, 若未介入则换下一个样本
+    }
     const r = p % perim;
     let col, row;
     if (r < 2 * s) {                 // 上边: 向右
@@ -1096,7 +1130,6 @@ function startAutoAnim() {
       col = cx - s; row = cy + s - (r - 6 * s);
     }
     updateHover(clamp(Math.round(col), 0, RES - 1), clamp(Math.round(row), 0, RES - 1));
-    p += 1;
     autoAnimRAF = requestAnimationFrame(step);
   };
   autoAnimRAF = requestAnimationFrame(step);
@@ -1137,9 +1170,13 @@ async function init() {
   // 懒加载: 只先加载默认数据集 (dme)
   await setDataset('dme');
 
-  // 自动动: 锚点自动扫动, 鼠标首次进入可视化区域即停止
+  // 自动动: 锚点自动扫动, 每半个周长切换样本; 鼠标首次进入即停止
   startAutoAnim();
-  [origCanvas, gtCanvas, colCanvas, depthCanvas].forEach(c => c.addEventListener('mouseenter', stopAutoAnim));
+  ensureDataset('nAMD').catch(() => {});
+  ensureDataset('normal').catch(() => {});
+  [origCanvas, gtCanvas, colCanvas, depthCanvas,
+   document.getElementById('thumbD'), document.getElementById('thumbN'), document.getElementById('thumbH')
+  ].forEach(el => el.addEventListener('mouseenter', stopAutoAnim));
 
   document.getElementById('thumbD').addEventListener('click', () => setDataset('dme'));
   document.getElementById('thumbN').addEventListener('click', () => setDataset('nAMD'));
