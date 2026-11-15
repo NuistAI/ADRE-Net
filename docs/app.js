@@ -1216,11 +1216,13 @@ async function init() {
   const hLoadPromise = setHDataset('dme');
   hLoadPromise.catch(() => {});
 
-  // 渐进式加载 DME (IVSA): 先原图/GT, 再注意力数据
-  const [dOrig, dGt] = await Promise.all([
-    loadImage('dme_orig.png'),
-    loadImage('dme_gt.png'),
-  ]);
+  // 渐进式加载 DME (IVSA): 并行加载原图/GT 与注意力数据, 先渲染原图/GT, 注意力数据就绪后再渲染完整
+  const dOrigP = loadImage('dme_orig.png');
+  const dGtP = loadImage('dme_gt.png');
+  const dRmP = loadBinGz('dme_row_maps.bin');
+  const dCmP = loadBinGz('dme_col_maps.bin');
+
+  const [dOrig, dGt] = await Promise.all([dOrigP, dGtP]);
   origImg = dOrig; gtImg = dGt; gtData = getImgData(dGt, RES, RES).data;
   curDataset = 'dme';
   document.getElementById('thumbD').classList.add('active');
@@ -1231,10 +1233,7 @@ async function init() {
   updateRowLabels(pinnedRow);
   updateColLabels(pinnedCol);
 
-  const [dRm, dCm] = await Promise.all([
-    loadBinGz('dme_row_maps.bin'),
-    loadBinGz('dme_col_maps.bin'),
-  ]);
+  const [dRm, dCm] = await Promise.all([dRmP, dCmP]);
   rowMaps = dRm; colMaps = dCm;
   DATASETS.dme = { origImg: dOrig, gtImg: dGt, rowMaps: dRm, colMaps: dCm, gtData };
   // 清除静态占位背景, 渲染真实数据
