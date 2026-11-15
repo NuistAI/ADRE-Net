@@ -996,11 +996,53 @@ function switchModelTab(category, event) {
     : document.querySelector('.qual-wrapper[data-ds="duke"]');
   if (!wrapper) return;
   const ds = wrapper.dataset.ds || 'duke';
+  // 同步自动轮播当前索引 (用户手动切换后, 轮播从该位置继续)
+  const idx = QUAL_CATEGORIES.indexOf(category);
+  if (idx >= 0 && qualCycleState[ds]) qualCycleState[ds].idx = idx;
   const buttons = wrapper.querySelectorAll('.qual-tab-btn');
   buttons.forEach(btn => btn.classList.remove('active'));
   if (target) target.classList.add('active');
   else if (buttons.length) buttons[0].classList.add('active');
   renderQualList(ds, category);
+}
+
+// —— 定性比较: 每个数据集自动轮播模型类别, 每 2 秒切换, 悬停暂停/离开恢复 ——
+const QUAL_CATEGORIES = ['cnn', 'trans', 'mamba', 'oct'];
+const qualCycleState = {
+  duke: { idx: 0, timer: null, paused: false },
+  aroi: { idx: 0, timer: null, paused: false },
+  hcms: { idx: 0, timer: null, paused: false },
+};
+
+function advanceQualCycle(ds) {
+  const state = qualCycleState[ds];
+  if (!state) return;
+  state.idx = (state.idx + 1) % QUAL_CATEGORIES.length;
+  const category = QUAL_CATEGORIES[state.idx];
+  const wrapper = document.querySelector(`.qual-wrapper[data-ds="${ds}"]`);
+  if (!wrapper) return;
+  const buttons = wrapper.querySelectorAll('.qual-tab-btn');
+  buttons.forEach(b => b.classList.remove('active'));
+  if (buttons[state.idx]) buttons[state.idx].classList.add('active');
+  renderQualList(ds, category);
+}
+
+function startQualCycle(ds) {
+  const state = qualCycleState[ds];
+  if (!state || state.timer) return;
+  state.timer = setInterval(() => {
+    if (!state.paused) advanceQualCycle(ds);
+  }, 2000);
+}
+
+function pauseQualCycle(ds) {
+  const state = qualCycleState[ds];
+  if (state) state.paused = true;
+}
+
+function resumeQualCycle(ds) {
+  const state = qualCycleState[ds];
+  if (state) state.paused = false;
 }
 
 // —— 懒加载: 各数据集的加载器 + Promise 缓存 ——
@@ -1371,6 +1413,15 @@ async function init() {
 
   // DME 已加载完成, 现在加载定性比较的固定列(Image/GT/Ours)雪碧图
   document.body.classList.add('qual-ready');
+
+  // 定性比较: 每个数据集每 2 秒自动切换模型类别, 悬停暂停/离开恢复
+  ['duke', 'aroi', 'hcms'].forEach(ds => {
+    const wrapper = document.querySelector(`.qual-wrapper[data-ds="${ds}"]`);
+    if (!wrapper) return;
+    wrapper.addEventListener('mouseenter', () => pauseQualCycle(ds));
+    wrapper.addEventListener('mouseleave', () => resumeQualCycle(ds));
+    startQualCycle(ds);
+  });
 }
 
 init().catch(err => {
