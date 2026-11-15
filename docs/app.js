@@ -74,6 +74,15 @@ async function loadBin(url) {
   return new Uint8Array(await r.arrayBuffer());
 }
 
+// 加载 .gz 压缩的二进制文件并在浏览器端解压 (gzip)
+async function loadBinGz(url) {
+  const r = await fetch(url + '.gz');
+  if (!r.ok) throw new Error('fetch failed: ' + url + '.gz');
+  const ds = new DecompressionStream('gzip');
+  const buf = await new Response(r.body.pipeThrough(ds)).arrayBuffer();
+  return new Uint8Array(buf);
+}
+
 function getImgData(img, w, h) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -990,20 +999,20 @@ async function init() {
   const [orig, gt, rm, cm] = await Promise.all([
     loadImage('orig.png'),
     loadImage('gt.png'),
-    loadBin('row_maps.bin'),
-    loadBin('col_maps.bin'),
+    loadBinGz('row_maps.bin'),
+    loadBinGz('col_maps.bin'),
   ]);
   const [ho, hg, hrm, hcm] = await Promise.all([
     loadImage('hcms_orig.png'),
     loadImage('hcms_gt.png'),
-    loadBin('hcms_row_maps.bin'),
-    loadBin('hcms_col_maps.bin'),
+    loadBinGz('hcms_row_maps.bin'),
+    loadBinGz('hcms_col_maps.bin'),
   ]);
   const [do_, dg, drm, dcm] = await Promise.all([
     loadImage('dme_orig.png'),
     loadImage('dme_gt.png'),
-    loadBin('dme_row_maps.bin'),
-    loadBin('dme_col_maps.bin'),
+    loadBinGz('dme_row_maps.bin'),
+    loadBinGz('dme_col_maps.bin'),
   ]);
   DATASETS.dme = { origImg: do_, gtImg: dg, rowMaps: drm, colMaps: dcm, gtData: getImgData(dg, RES, RES).data };
   DATASETS.nAMD = { origImg: orig, gtImg: gt, rowMaps: rm, colMaps: cm, gtData: getImgData(gt, RES, RES).data };
