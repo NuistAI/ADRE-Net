@@ -1199,6 +1199,12 @@ function startHAutoAnim() {
 }
 
 async function init() {
+  // 起始点注意力图静态占位, 真实数据加载完成后替换
+  colCanvas.style.backgroundImage = "url('static_col.png')";
+  colCanvas.style.backgroundSize = '100% 100%';
+  depthCanvas.style.backgroundImage = "url('static_depth.png')";
+  depthCanvas.style.backgroundSize = '100% 100%';
+
   drawColorbar(cbCtx);
   drawColorbar(hCbCtx);
 
@@ -1223,6 +1229,9 @@ async function init() {
   ]);
   rowMaps = dRm; colMaps = dCm;
   DATASETS.dme = { origImg: dOrig, gtImg: dGt, rowMaps: dRm, colMaps: dCm, gtData };
+  // 清除静态占位背景, 渲染真实数据
+  colCanvas.style.backgroundImage = 'none';
+  depthCanvas.style.backgroundImage = 'none';
   updateHover(pinnedCol, pinnedRow);
 
   // 自动动: 静态 1 秒后开始, 优先保证首个样本快速加载; 鼠标首次进入即停止
