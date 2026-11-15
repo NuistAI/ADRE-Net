@@ -1079,7 +1079,7 @@ function startAutoAnim() {
   if (autoAnimStopped) return;
   const cx = DEFAULT_COL;   // 正方形中心列
   const cy = DEFAULT_ROW;   // 正方形中心行
-  const s = 25;             // 半边长 (小正方形)
+  const s = 50;             // 半边长 (小正方形)
   const perim = 8 * s;      // 周长
   let p = 0;                // 沿周长位置 (顺时针: 上边右→右边下→下边左→左边上)
   const step = () => {
