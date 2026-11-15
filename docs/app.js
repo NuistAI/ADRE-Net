@@ -1147,7 +1147,7 @@ function stopHAutoAnim() {
 
 function startHAutoAnim() {
   if (hAutoAnimStopped) return;
-  const sweepHalf = 50;                    // 扫动半范围 50px (总范围 100px)
+  const sweepHalf = 100;                   // 扫动半范围 100px (总范围 200px)
   const center = Math.round(RES / 2);      // 中心列 (112)
   let col = center;
   let dir = 1;
