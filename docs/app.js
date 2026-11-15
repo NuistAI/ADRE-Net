@@ -1102,6 +1102,32 @@ function startAutoAnim() {
   autoAnimRAF = requestAnimationFrame(step);
 }
 
+// —— IHSA 自动动: 加载后选中列左右扫动, 鼠标首次介入即停止 ——
+let hAutoAnimStopped = false;
+let hAutoAnimRAF = null;
+
+function stopHAutoAnim() {
+  if (hAutoAnimStopped) return;
+  hAutoAnimStopped = true;
+  if (hAutoAnimRAF) { cancelAnimationFrame(hAutoAnimRAF); hAutoAnimRAF = null; }
+}
+
+function startHAutoAnim() {
+  if (hAutoAnimStopped) return;
+  let col = hCol;
+  let dir = 1;
+  const step = () => {
+    if (hAutoAnimStopped) return;
+    col += dir;
+    if (col >= RES - 1) { col = RES - 1; dir = -1; }
+    else if (col <= 0) { col = 0; dir = 1; }
+    hCol = col;
+    renderHCol();
+    hAutoAnimRAF = requestAnimationFrame(step);
+  };
+  hAutoAnimRAF = requestAnimationFrame(step);
+}
+
 async function init() {
   drawColorbar(cbCtx);
   drawColorbar(hCbCtx);
@@ -1123,6 +1149,11 @@ async function init() {
   try {
     // 懒加载: 只先加载默认数据集 (normal)
     await setHDataset('normal');
+
+    // 自动动: 选中列左右扫动, 鼠标首次进入即停止
+    startHAutoAnim();
+    [hcmsOrigCanvas, hcmsGtCanvas, hAttnCanvas, hSpatialCanvas].forEach(c => c.addEventListener('mouseenter', stopHAutoAnim));
+
     hcmsOrigCanvas.addEventListener('mousemove', onHCol);
     hcmsOrigCanvas.addEventListener('click', onHColPin);
     hcmsOrigCanvas.addEventListener('mouseleave', onHColLeave);
