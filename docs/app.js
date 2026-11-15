@@ -1272,6 +1272,27 @@ function scheduleResumeHAutoAnim() {
   }, 5000);
 }
 
+// 鼠标停留 2 秒视为单击 (hover-to-pin)
+function addHoverToPin(el, clickHandler) {
+  let timer = null;
+  let lastX = null, lastY = null;
+  el.addEventListener('mousemove', (e) => {
+    lastX = e.clientX;
+    lastY = e.clientY;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      if (lastX === null) return;
+      clickHandler({ currentTarget: el, clientX: lastX, clientY: lastY });
+    }, 2000);
+  });
+  el.addEventListener('mouseleave', () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    lastX = null; lastY = null;
+  });
+}
+
 // 水平(IHSA)小节初始化: 绑定交互 + 启动自动动 (IHSA 数据加载完成后立即调用, 不等 IVSA)
 function setupHorizontalSection() {
   setTimeout(startHAutoAnim, 1000);
@@ -1315,6 +1336,12 @@ function setupHorizontalSection() {
   hSpatialCanvas.addEventListener('mouseleave', () => { hSpatialHovered = false; renderHCol(); });
   hSpatialCanvas.addEventListener('mouseenter', () => { document.getElementById('hSpatialMouseIcon').classList.add('show'); });
   hSpatialCanvas.addEventListener('mouseleave', () => { document.getElementById('hSpatialMouseIcon').classList.remove('show'); });
+
+  // 鼠标停留 2 秒 = 单击 (hover-to-pin)
+  addHoverToPin(hcmsOrigCanvas, onHColPin);
+  addHoverToPin(hcmsGtCanvas, onHColPin);
+  addHoverToPin(hAttnCanvas, onHAttnPin);
+  addHoverToPin(hSpatialCanvas, onHColPin);
 
   document.getElementById('hThumbD').addEventListener('click', () => setHDataset('dme'));
   document.getElementById('hThumbN').addEventListener('click', () => setHDataset('nAMD'));
@@ -1406,6 +1433,12 @@ async function init() {
   colCanvas.addEventListener('mouseleave', () => { colHovered = false; renderColPanel(curCol, curRow); });
   colCanvas.addEventListener('mouseenter', () => { document.getElementById('colMouseIcon').classList.add('show'); });
   colCanvas.addEventListener('mouseleave', () => { document.getElementById('colMouseIcon').classList.remove('show'); });
+
+  // 鼠标停留 2 秒 = 单击 (hover-to-pin)
+  addHoverToPin(origCanvas, onPin);
+  addHoverToPin(gtCanvas, onPinGt);
+  addHoverToPin(depthCanvas, onPinDepth);
+  addHoverToPin(colCanvas, onPinCol);
 
   switchModelTab('cnn');
   switchModelTab('cnn', { target: document.querySelector('.qual-wrapper[data-ds="aroi"] .qual-tab-btn') });
