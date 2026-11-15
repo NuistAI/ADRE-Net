@@ -198,9 +198,10 @@
   .qual-scroll-row { display: flex; gap: 8px; }
   .qual-box { display: flex; flex-direction: column; align-items: center; width: 64px; flex-shrink: 0; }
   .qual-img { width: 64px; height: 64px; background-repeat: no-repeat; border-radius: 4px; border: 1px solid #eee; }
-  .qual-wrapper[data-ds="duke"] .qual-img { background-image: url('duke_sprite.png'); background-size: 960px 192px; }
-  .qual-wrapper[data-ds="aroi"] .qual-img { background-image: url('aroi_sprite.png'); background-size: 960px 128px; }
-  .qual-wrapper[data-ds="hcms"] .qual-img { background-image: url('hcms_sprite.png'); background-size: 896px 128px; }
+  /* 固定列(Image/GT/Ours) 雪碧图: 通过 body.qual-ready 在 DME 加载完成后才加载 */
+  body.qual-ready .qual-wrapper[data-ds="duke"] .qual-fixed .qual-img { background-image: url('duke_fixed.png'); background-size: 192px 192px; }
+  body.qual-ready .qual-wrapper[data-ds="aroi"] .qual-fixed .qual-img { background-image: url('aroi_fixed.png'); background-size: 192px 128px; }
+  body.qual-ready .qual-wrapper[data-ds="hcms"] .qual-fixed .qual-img { background-image: url('hcms_fixed.png'); background-size: 192px 128px; }
   .qual-name { font-size: 9px; font-weight: 600; margin-top: 2px; text-align: center; color: #333; line-height: 11px; height: 11px; white-space: nowrap; overflow: hidden; }
   .qual-name sup { font-size: 6px; line-height: 0; }
   .qual-year { font-size: 8px; font-weight: 400; margin-top: 1px; text-align: center; color: #888; line-height: 1; white-space: nowrap; }
@@ -459,17 +460,17 @@
       <div class="qual-fixed-row">
         <div class="qual-box"><div class="qual-img" style="background-position:0 0"></div></div>
         <div class="qual-box"><div class="qual-img" style="background-position:-64px 0"></div></div>
-        <div class="qual-box ours"><div class="qual-img" style="background-position:-896px 0"></div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px 0"></div></div>
       </div>
       <div class="qual-fixed-row">
         <div class="qual-box"><div class="qual-img" style="background-position:0 -64px"></div></div>
         <div class="qual-box"><div class="qual-img" style="background-position:-64px -64px"></div></div>
-        <div class="qual-box ours"><div class="qual-img" style="background-position:-896px -64px"></div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px -64px"></div></div>
       </div>
       <div class="qual-fixed-row">
         <div class="qual-box"><div class="qual-img" style="background-position:0 -128px"></div><div class="qual-name">Image</div></div>
         <div class="qual-box"><div class="qual-img" style="background-position:-64px -128px"></div><div class="qual-name">GT</div></div>
-        <div class="qual-box ours"><div class="qual-img" style="background-position:-896px -128px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px -128px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
       </div>
     </div>
     <div class="qual-right-panel">
@@ -492,12 +493,12 @@
       <div class="qual-fixed-row">
         <div class="qual-box"><div class="qual-img" style="background-position:0 0"></div></div>
         <div class="qual-box"><div class="qual-img" style="background-position:-64px 0"></div></div>
-        <div class="qual-box ours"><div class="qual-img" style="background-position:-896px 0"></div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px 0"></div></div>
       </div>
       <div class="qual-fixed-row">
         <div class="qual-box"><div class="qual-img" style="background-position:0 -64px"></div><div class="qual-name">Image</div></div>
         <div class="qual-box"><div class="qual-img" style="background-position:-64px -64px"></div><div class="qual-name">GT</div></div>
-        <div class="qual-box ours"><div class="qual-img" style="background-position:-896px -64px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px -64px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
       </div>
     </div>
     <div class="qual-right-panel">
@@ -520,12 +521,12 @@
       <div class="qual-fixed-row">
         <div class="qual-box"><div class="qual-img" style="background-position:0 0"></div></div>
         <div class="qual-box"><div class="qual-img" style="background-position:-64px 0"></div></div>
-        <div class="qual-box ours"><div class="qual-img" style="background-position:-832px 0"></div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px 0"></div></div>
       </div>
       <div class="qual-fixed-row">
         <div class="qual-box"><div class="qual-img" style="background-position:0 -64px"></div><div class="qual-name">Image</div></div>
         <div class="qual-box"><div class="qual-img" style="background-position:-64px -64px"></div><div class="qual-name">GT</div></div>
-        <div class="qual-box ours"><div class="qual-img" style="background-position:-832px -64px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px -64px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
       </div>
     </div>
     <div class="qual-right-panel">
@@ -558,6 +559,6 @@
   </div>
 
   <script src="data.js?v=156"></script>
-  <script src="app.js?v=174"></script>
+  <script src="app.js?v=175"></script>
 </body>
 </html>

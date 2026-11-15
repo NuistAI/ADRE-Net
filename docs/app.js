@@ -918,12 +918,6 @@ const qualModelRefs = {
   relaynet: 10, tcct: 11, gdnet: 12,
 };
 
-// Duke / AROI: 15 列 (image, gt, 12 个模型, ours)
-const QUAL_COL_FULL = {
-  image: 0, gt: 1, unet: 2, deeplabv3p: 3, unet3p: 4, transunet: 5, cswinunet: 6,
-  agileformer: 7, mambaunet: 8, swinumamba: 9, switchumamba: 10, relaynet: 11,
-  tcct: 12, gdnet: 13, ours: 14,
-};
 const QUAL_SLUGS_FULL = {
   cnn: ['unet', 'deeplabv3p', 'unet3p'],
   trans: ['transunet', 'cswinunet', 'agileformer'],
@@ -931,11 +925,7 @@ const QUAL_SLUGS_FULL = {
   oct: ['relaynet', 'tcct', 'gdnet'],
 };
 
-// HCMS: 14 列 (缺 GD-Net)
-const QUAL_COL_HCMS = {
-  image: 0, gt: 1, unet: 2, deeplabv3p: 3, unet3p: 4, transunet: 5, cswinunet: 6,
-  agileformer: 7, mambaunet: 8, swinumamba: 9, switchumamba: 10, relaynet: 11, tcct: 12, ours: 13,
-};
+// HCMS: 缺 GD-Net
 const QUAL_SLUGS_HCMS = {
   cnn: ['unet', 'deeplabv3p', 'unet3p'],
   trans: ['transunet', 'cswinunet', 'agileformer'],
@@ -945,9 +935,9 @@ const QUAL_SLUGS_HCMS = {
 
 // 每个数据集的渲染配置
 const QUAL_CONFIG = {
-  duke: { rows: 3, listId: 'dukeModelList', colIndex: QUAL_COL_FULL, slugs: QUAL_SLUGS_FULL },
-  aroi: { rows: 2, listId: 'aroiModelList', colIndex: QUAL_COL_FULL, slugs: QUAL_SLUGS_FULL },
-  hcms: { rows: 2, listId: 'hcmsModelList', colIndex: QUAL_COL_HCMS, slugs: QUAL_SLUGS_HCMS },
+  duke: { rows: 3, listId: 'dukeModelList', slugs: QUAL_SLUGS_FULL },
+  aroi: { rows: 2, listId: 'aroiModelList', slugs: QUAL_SLUGS_FULL },
+  hcms: { rows: 2, listId: 'hcmsModelList', slugs: QUAL_SLUGS_HCMS },
 };
 
 function renderQualList(ds, category) {
@@ -959,15 +949,20 @@ function renderQualList(ds, category) {
   const inner = document.createElement('div');
   inner.className = 'qual-scroll-inner';
   const slugs = cfg.slugs[category] || [];
+  const sprite = `${ds}_${category}.png`;
+  const spriteW = slugs.length * 64;
+  const spriteH = cfg.rows * 64;
   for (let r = 1; r <= cfg.rows; r++) {
     const row = document.createElement('div');
     row.className = 'qual-scroll-row';
-    slugs.forEach(slug => {
+    slugs.forEach((slug, idx) => {
       const box = document.createElement('div');
       box.className = 'qual-box';
       const img = document.createElement('div');
       img.className = 'qual-img';
-      img.style.backgroundPosition = `-${cfg.colIndex[slug] * 64}px -${(r - 1) * 64}px`;
+      img.style.backgroundImage = `url('${sprite}')`;
+      img.style.backgroundSize = `${spriteW}px ${spriteH}px`;
+      img.style.backgroundPosition = `-${idx * 64}px -${(r - 1) * 64}px`;
       box.appendChild(img);
       if (r === cfg.rows) {
         const name = document.createElement('div');
@@ -1207,8 +1202,28 @@ async function init() {
   drawColorbar(cbCtx);
   drawColorbar(hCbCtx);
 
-  // 懒加载: 只先加载默认数据集 (dme)
-  await setDataset('dme');
+  // 渐进式加载 DME (IVSA): 先原图/GT, 再注意力数据
+  const [dOrig, dGt] = await Promise.all([
+    loadImage('dme_orig.png'),
+    loadImage('dme_gt.png'),
+  ]);
+  origImg = dOrig; gtImg = dGt; gtData = getImgData(dGt, RES, RES).data;
+  curDataset = 'dme';
+  document.getElementById('thumbD').classList.add('active');
+  buildLegend(legendFor('dme'));
+  renderPanel(origCtx, origImg, pinnedRow, pinnedCol);
+  renderPanel(gtCtx, gtImg, pinnedRow, pinnedCol);
+  updateTitles(pinnedRow, pinnedCol);
+  updateRowLabels(pinnedRow);
+  updateColLabels(pinnedCol);
+
+  const [dRm, dCm] = await Promise.all([
+    loadBinGz('dme_row_maps.bin'),
+    loadBinGz('dme_col_maps.bin'),
+  ]);
+  rowMaps = dRm; colMaps = dCm;
+  DATASETS.dme = { origImg: dOrig, gtImg: dGt, rowMaps: dRm, colMaps: dCm, gtData };
+  updateHover(pinnedCol, pinnedRow);
 
   // 自动动: 静态 1 秒后开始, 优先保证首个样本快速加载; 鼠标首次进入即停止
   setTimeout(startAutoAnim, 1000);
@@ -1306,6 +1321,9 @@ async function init() {
   switchModelTab('cnn');
   switchModelTab('cnn', { target: document.querySelector('.qual-wrapper[data-ds="aroi"] .qual-tab-btn') });
   switchModelTab('cnn', { target: document.querySelector('.qual-wrapper[data-ds="hcms"] .qual-tab-btn') });
+
+  // DME 已加载完成, 现在加载定性比较的固定列(Image/GT/Ours)雪碧图
+  document.body.classList.add('qual-ready');
 }
 
 init().catch(err => {
