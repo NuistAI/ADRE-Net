@@ -48,8 +48,12 @@ let hGtStripH = null;   // GT 列色条(水平, 224×HSTRIP)
 let hGtStripV = null;   // GT 列色条(垂直, HSTRIP×224)
 let hOrigImg = null;    // 当前原图
 let hGtImg = null;      // 当前 GT
-let hCol = 112;         // 当前选中列
-let hFixedCol = 112;    // 固定列
+const H_SWEEP_HALF = 100;                          // IHSA 扫动半范围
+const H_SWEEP_CENTER = Math.round(RES / 2);        // 中心列 (112)
+const H_SWEEP_LEFT = H_SWEEP_CENTER - H_SWEEP_HALF;   // 左端 (12)
+const H_SWEEP_RIGHT = H_SWEEP_CENTER + H_SWEEP_HALF;  // 右端 (212)
+let hCol = H_SWEEP_LEFT;         // 当前选中列 (默认=动的起始点)
+let hFixedCol = H_SWEEP_LEFT;    // 固定列
 let hCurDataset = 'dme';
 const HDATASETS = {};   // key -> {origImg, gtImg, attnU8}
 
@@ -1173,26 +1177,26 @@ function stopHAutoAnim() {
 
 function startHAutoAnim() {
   if (hAutoAnimStopped) return;
-  const sweepHalf = 100;                   // 扫动半范围 100px (总范围 200px)
-  const center = Math.round(RES / 2);      // 中心列 (112)
-  const left = center - sweepHalf;          // 左端
-  const right = center + sweepHalf;         // 右端
-  let col = left;                           // 从左开始
-  let dir = 1;                              // 1=向右, -1=向左
+  const left = H_SWEEP_LEFT;
+  const right = H_SWEEP_RIGHT;
+  const half = right - left;               // 半程 (一个方向)
+  const firstSwitchAt = 4 * half;          // 先在 DME 上来回两个回合再切换
+  let dist = 0;                            // 累计扫动距离
+  let col = left;                          // 从左(起始点)开始
+  let dir = 1;                             // 1=向右, -1=向左
+  let nextSwitchAt = firstSwitchAt;
   const step = () => {
     if (hAutoAnimStopped) return;
     hCol = col;
     renderHCol();
     col += dir;
-    if (col > right) {                      // 到右端: 换样本并掉头向左
-      col = right;
-      dir = -1;
-      autoAdvanceHDataset();
-    } else if (col < left) {                // 到左端: 换样本并掉头向右
-      col = left;
-      dir = 1;
+    dist += 1;
+    if (dist >= nextSwitchAt) {            // 到切换距离: 换样本
+      nextSwitchAt += half;                // 之后每半程切换一次
       autoAdvanceHDataset();
     }
+    if (col > right) { col = right; dir = -1; }   // 掉头
+    else if (col < left) { col = left; dir = 1; }
     hAutoAnimRAF = requestAnimationFrame(step);
   };
   hAutoAnimRAF = requestAnimationFrame(step);
@@ -1255,8 +1259,8 @@ async function init() {
     // 等待并行加载的 IHSA 数据 (此时大概率已就绪)
     await hLoadPromise;
 
-    // 自动动: 3 秒后开始
-    setTimeout(startHAutoAnim, 3000);
+    // 自动动: 1 秒后开始
+    setTimeout(startHAutoAnim, 1000);
     [hcmsOrigCanvas, hcmsGtCanvas, hAttnCanvas, hSpatialCanvas].forEach(c => c.addEventListener('mouseenter', stopHAutoAnim));
 
     hcmsOrigCanvas.addEventListener('mousemove', onHCol);
