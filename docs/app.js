@@ -1208,6 +1208,10 @@ async function init() {
   drawColorbar(cbCtx);
   drawColorbar(hCbCtx);
 
+  // 并行开始 IHSA 加载 (数据量小, 与 IVSA 同时进行, 避免等待)
+  const hLoadPromise = setHDataset('dme');
+  hLoadPromise.catch(() => {});
+
   // 渐进式加载 DME (IVSA): 先原图/GT, 再注意力数据
   const [dOrig, dGt] = await Promise.all([
     loadImage('dme_orig.png'),
@@ -1248,8 +1252,8 @@ async function init() {
   document.getElementById('thumbH').addEventListener('mouseenter', () => setDataset('normal'));
 
   try {
-    // 懒加载: 只先加载默认数据集 (dme)
-    await setHDataset('dme');
+    // 等待并行加载的 IHSA 数据 (此时大概率已就绪)
+    await hLoadPromise;
 
     // 自动动: 3 秒后开始
     setTimeout(startHAutoAnim, 3000);
