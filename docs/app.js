@@ -47,7 +47,7 @@ let hOrigImg = null;    // 当前原图
 let hGtImg = null;      // 当前 GT
 let hCol = 112;         // 当前选中列
 let hFixedCol = 112;    // 固定列
-let hCurDataset = 'normal';
+let hCurDataset = 'dme';
 const HDATASETS = {};   // key -> {origImg, gtImg, attnU8}
 
 // VIRIDIS 256-entry RGBA LUT
@@ -1147,8 +1147,8 @@ async function init() {
   document.getElementById('thumbH').addEventListener('mouseenter', () => setDataset('normal'));
 
   try {
-    // 懒加载: 只先加载默认数据集 (normal)
-    await setHDataset('normal');
+    // 懒加载: 只先加载默认数据集 (dme)
+    await setHDataset('dme');
 
     // 自动动: 选中列左右扫动, 鼠标首次进入即停止
     startHAutoAnim();
