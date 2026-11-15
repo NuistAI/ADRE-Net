@@ -1065,12 +1065,41 @@ function ensureHDataset(key) {
   return HDATASET_PROMISES[key];
 }
 
+// —— 自动动: 加载后锚点自动扫动, 鼠标首次介入即停止(此后不再自动动) ——
+let autoAnimStopped = false;
+let autoAnimRAF = null;
+
+function stopAutoAnim() {
+  if (autoAnimStopped) return;
+  autoAnimStopped = true;
+  if (autoAnimRAF) { cancelAnimationFrame(autoAnimRAF); autoAnimRAF = null; }
+}
+
+function startAutoAnim() {
+  if (autoAnimStopped) return;
+  let col = DEFAULT_COL;
+  let dir = 1;
+  const step = () => {
+    if (autoAnimStopped) return;
+    col += dir;
+    if (col >= RES - 1) { col = RES - 1; dir = -1; }
+    else if (col <= 0) { col = 0; dir = 1; }
+    updateHover(col, DEFAULT_ROW);
+    autoAnimRAF = requestAnimationFrame(step);
+  };
+  autoAnimRAF = requestAnimationFrame(step);
+}
+
 async function init() {
   drawColorbar(cbCtx);
   drawColorbar(hCbCtx);
 
   // 懒加载: 只先加载默认数据集 (dme)
   await setDataset('dme');
+
+  // 自动动: 锚点自动扫动, 鼠标首次进入可视化区域即停止
+  startAutoAnim();
+  [origCanvas, gtCanvas, colCanvas, depthCanvas].forEach(c => c.addEventListener('mouseenter', stopAutoAnim));
 
   document.getElementById('thumbD').addEventListener('click', () => setDataset('dme'));
   document.getElementById('thumbN').addEventListener('click', () => setDataset('nAMD'));
