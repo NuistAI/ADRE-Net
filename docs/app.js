@@ -1077,14 +1077,26 @@ function stopAutoAnim() {
 
 function startAutoAnim() {
   if (autoAnimStopped) return;
-  let col = DEFAULT_COL;
-  let dir = 1;
+  const cx = DEFAULT_COL;   // 正方形中心列
+  const cy = DEFAULT_ROW;   // 正方形中心行
+  const s = 25;             // 半边长 (小正方形)
+  const perim = 8 * s;      // 周长
+  let p = 0;                // 沿周长位置 (顺时针: 上边右→右边下→下边左→左边上)
   const step = () => {
     if (autoAnimStopped) return;
-    col += dir;
-    if (col >= RES - 1) { col = RES - 1; dir = -1; }
-    else if (col <= 0) { col = 0; dir = 1; }
-    updateHover(col, DEFAULT_ROW);
+    const r = p % perim;
+    let col, row;
+    if (r < 2 * s) {                 // 上边: 向右
+      col = cx - s + r; row = cy - s;
+    } else if (r < 4 * s) {          // 右边: 向下
+      col = cx + s; row = cy - s + (r - 2 * s);
+    } else if (r < 6 * s) {          // 下边: 向左
+      col = cx + s - (r - 4 * s); row = cy + s;
+    } else {                          // 左边: 向上
+      col = cx - s; row = cy + s - (r - 6 * s);
+    }
+    updateHover(clamp(Math.round(col), 0, RES - 1), clamp(Math.round(row), 0, RES - 1));
+    p += 1;
     autoAnimRAF = requestAnimationFrame(step);
   };
   autoAnimRAF = requestAnimationFrame(step);
