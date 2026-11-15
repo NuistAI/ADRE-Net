@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ADRE-Net: Attention Explorer</title>
+<style>
+  :root { --gap: 20px; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f7f7f7; color: #222;
+  }
+
+  /* --- 新增的标题区样式 --- */
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  h1 { 
+    font-size: 32px; 
+    margin: 0 0 16px; 
+    color: #000;
+    line-height: 1.3;
+  }
+  h1 .brand { color: #3b82f6; /* 类似截图中的蓝色 */ }
+  .intro { 
+    font-size: 16px; 
+    color: #555; 
+    line-height: 1.6; 
+    margin-bottom: 24px; 
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    background: #222;
+    color: #fff;
+    border: 1px solid #222;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: #444; border-color: #444; }
+  /* ----------------------- */
+
+  .main-title {
+    text-align: left;
+    white-space: nowrap;
+    font-size: 24px;
+    font-weight: 700;
+    color: #111;
+    width: 552px;
+    margin: 28px auto 22px;
+    border-left: 6px solid #3b82f6;
+    padding-left: 14px;
+    transform: translateX(-75px);
+  }
+
+  .section-title {
+    text-align: left;
+    position: relative;
+    white-space: nowrap;
+    font-size: 20px;
+    font-weight: 700;
+    color: #222;
+    width: 552px;   /* 与 #main 网格总宽一致(含左侧缩略图列) */
+    margin: 0 auto 28px;
+    border-left: 4px solid #3b82f6;
+    padding-left: 12px;
+    transform: translateX(-75px);
+  }
+  .section-title::after {
+    content: "";
+    position: absolute;
+    left: 2px;      /* 紧挨 4px 竖线右侧 */
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #3b82f6;
+  }
+
+  .sub { margin: 0 auto 24px; text-align: center; color: #666; font-size: 13px; }
+  .sub .emoji { font-size: 15px; }
+
+  #main {
+    display: grid;
+    grid-template-columns: 28px 112px 112px 124px 112px 24px;
+    column-gap: 8px;
+    row-gap: 2px;
+    justify-content: center;
+  }
+
+  #thumbCol, #hThumbCol { align-self: end; display: flex; flex-direction: column; gap: 4px; margin-left: -50px; transform: translateY(20px); }
+  #hThumbCol { transform: translateY(10px); }
+  .thumb { cursor: pointer; text-align: center; border-radius: 4px; opacity: 0.55; }
+  .thumb:hover { opacity: 0.85; }
+  .thumb.active { opacity: 1; }
+  .thumb img { width: 28px; height: 28px; display: block; margin: 0 auto; image-rendering: pixelated; background: #fff; }
+  .thumb-label { font-size: 10px; font-weight: 600; color: #222; margin-top: 1px; }
+  .t { font-size: 12px; font-weight: 600; text-align: center; }
+  #titleCol, #titleDepth { text-align: left; justify-self: center; }
+  #main > .t { transform: translateY(1px); }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    background: #fff;
+    border: 1px solid #ccc;
+    align-self: end;
+  }
+  #colCanvas, #depthCanvas { background: transparent; border: none; }
+  #origCanvas, #gtCanvas { width: 112px; height: 112px; }
+  #colCanvas { width: 124px; height: 124px; }
+  #depthCanvas { width: 112px; height: 124px; }
+  #colorbar, #hColorbar { width: 8px; height: 112px; background: transparent; border: none; }
+
+  .panelwrap { position: relative; align-self: end; }
+  .gt-mouse-icon {
+    position: absolute; right: 2px; bottom: 2px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.15s; z-index: 3;
+  }
+  .gt-mouse-icon.show { opacity: 0.85; }
+  .gt-mouse-icon .gt-btn { transition: transform 0.07s; }
+  .gt-mouse-icon.clicking .gt-btn { transform: translateY(2px); }
+  #hAttnMouseIcon { right: -7px; }
+  .lbl {
+    position: absolute; pointer-events: none; white-space: nowrap;
+    line-height: 1; font-size: 10px; font-weight: 700; color: #fff; z-index: 1;
+    text-align: center;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  }
+  #origColLab, #gtColLab { font-size: 10px; font-weight: 600; color: #222; text-shadow: none; }
+  #origRowLab { font-size: 10px; font-weight: 600; color: #222; text-shadow: none; }
+  #depthRowLab { font-weight: 600; }
+  #depthColLab, #depthRowLab { display: none; }
+  #depthWrap { transform: translateX(4px); }
+  #depthQLab { position: absolute; font-size: 10px; font-weight: 600; color: #222; line-height: 1; pointer-events: none; z-index: 1; }
+
+  .colwrap { position: relative; align-self: end; margin-left: 2px; }
+  .ax { position: absolute; text-align: center; color: #222; pointer-events: none; line-height: 1.15; z-index: 1; }
+  .axq {
+    left: -10px; top: 12px; width: 12px; height: 112px;
+    writing-mode: vertical-rl;
+    font-size: 10px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    transform: rotate(180deg);
+  }
+  .axk { left: -5px; top: -5px; width: 112px; font-size: 10px; font-weight: 600; line-height: 1; }
+  .axscan { left: 65px; top: -5px; width: 59px; display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; line-height: 1; white-space: nowrap; }
+  .axdepth { left: 58px; top: -5px; width: 54px; display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; line-height: 1; white-space: nowrap; }
+
+  .barwrap { position: relative; align-self: end; }
+  .barlab { position: absolute; font-size: 8px; font-weight: 600; color: #000; line-height: 1; pointer-events: none; white-space: nowrap; }
+  #highLab, #hHighLab { top: 0; left: 10px; transform: none; }
+  #lowLab, #hLowLab { bottom: 0; left: 10px; transform: none; }
+
+  #legend, #hLegend { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; }
+  #legend .item, #hLegend .item { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: #222; }
+  #legend .swatch, #hLegend .swatch { width: 10px; height: 10px; border: 1px solid #000; flex: none; }
+
+  #hTitle { width: 540px; margin: 0 auto 28px; }
+  #vTitle { margin: 40px auto 28px; }
+  #hmain { display: grid; grid-template-columns: 28px 112px 112px 112px 112px 24px; column-gap: 8px; justify-content: center; }
+  .hpanel { text-align: center; }
+  .hpanel .t { margin-bottom: 4px; transform: translateY(-8px); }
+  .hpanel canvas { width: 112px; height: 112px; margin: 0 auto; }
+  #hAttnCanvas { width: 126px; height: 126px; background: transparent; border: none; }
+  .hpanelwrap { position: relative; }
+  #hcmsOrigColLab, #hcmsGtColLab { position: absolute; font-size: 10px; font-weight: 600; color: #222; text-shadow: none; white-space: nowrap; pointer-events: none; line-height: 1; }
+  #hSpatialQLab { position: absolute; display: flex; justify-content: space-between; width: 72px; font-size: 10px; font-weight: 600; color: #222; text-shadow: none; white-space: nowrap; pointer-events: none; line-height: 1; }
+  .haxq { position: absolute; left: -12px; top: 14px; width: 12px; height: 112px; writing-mode: vertical-rl; font-size: 10px; font-weight: 600; color: #222; display: flex; align-items: center; justify-content: center; transform: rotate(180deg); pointer-events: none; }
+  .haxk { position: absolute; left: 7px; top: -10px; width: 112px; font-size: 10px; font-weight: 600; color: #222; text-align: center; line-height: 1; pointer-events: none; }
+  #hAttnWrap { transform: translate(2px, -14px); }
+  #hPanelAttn .t { transform: translate(9px, -24px); }
+  #hPanelSpatial { transform: translateX(10px); }
+  #hBarWrap { transform: translate(10px, -14px); }
+
+  /* --- Duke DME 定性比较 --- */
+  .qual-wrapper { display: flex; align-items: flex-start; width: fit-content; max-width: 552px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 10px; gap: 10px; }
+  .qual-fixed { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; border-right: 2px dashed #ccc; padding-right: 8px; margin-top: 28px; }
+  .qual-fixed-row { display: flex; gap: 8px; }
+  .qual-right-panel { display: flex; flex-direction: column; }
+  .qual-tabs { display: flex; gap: 4px; margin-bottom: 8px; height: 20px; white-space: nowrap; justify-content: flex-end; }
+  .qual-tab-btn { height: 20px; padding: 0 4px; font-size: 10px; font-weight: 600; color: #555; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; transition: all 0.2s; text-align: center; line-height: 18px; white-space: nowrap; }
+  .qual-tab-btn:hover { background: #cbd5e1; border-color: #94a3b8; }
+  .qual-tab-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; box-shadow: 0 2px 4px rgba(59,130,246,0.2); }
+  .qual-scroll { overflow-x: auto; padding-bottom: 8px; scroll-behavior: smooth; }
+  .qual-scroll::-webkit-scrollbar { height: 6px; }
+  .qual-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+  .qual-scroll::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+  .qual-scroll-inner { display: flex; flex-direction: column; gap: 8px; width: max-content; min-width: 100%; }
+  .qual-scroll-row { display: flex; gap: 8px; }
+  .qual-box { display: flex; flex-direction: column; align-items: center; width: 64px; flex-shrink: 0; }
+  .qual-img { width: 64px; height: 64px; background-repeat: no-repeat; border-radius: 4px; border: 1px solid #eee; }
+  /* 固定列(Image/GT/Ours) 雪碧图: 通过 body.qual-ready 在 DME 加载完成后才加载 */
+  body.qual-ready .qual-wrapper[data-ds="duke"] .qual-fixed .qual-img { background-image: url('duke_fixed.png'); background-size: 192px 192px; }
+  body.qual-ready .qual-wrapper[data-ds="aroi"] .qual-fixed .qual-img { background-image: url('aroi_fixed.png'); background-size: 192px 128px; }
+  body.qual-ready .qual-wrapper[data-ds="hcms"] .qual-fixed .qual-img { background-image: url('hcms_fixed.png'); background-size: 192px 128px; }
+  .qual-name { font-size: 9px; font-weight: 600; margin-top: 2px; text-align: center; color: #333; line-height: 11px; height: 11px; white-space: nowrap; overflow: hidden; }
+  .qual-name sup { font-size: 6px; line-height: 0; }
+  .qual-year { font-size: 8px; font-weight: 400; margin-top: 1px; text-align: center; color: #888; line-height: 1; white-space: nowrap; }
+  .qual-box.ours .qual-name { color: #3b82f6; font-weight: 700; }
+  .qual-refs { max-width: 552px; margin: 14px auto 0; text-align: left; font-size: 10px; color: #555; line-height: 1.5; }
+  .qual-refs-title { font-weight: 700; font-size: 11px; margin-bottom: 4px; color: #222; }
+  .qual-refs ol { margin: 0; padding-left: 18px; }
+  .qual-head { display: flex; align-items: flex-start; gap: 4px; max-width: 552px; margin: 0 auto 28px; transform: translateX(-75px); }
+  .qual-head .section-title { width: auto; margin: 0; transform: none; }
+  .qual-ds-icon { display: inline-flex; flex-shrink: 0; color: #3b82f6; margin-top: -3px; }
+  .qual-ds-icon:hover { color: #1d4ed8; }
+  .qual-ds-url { max-width: 552px; margin: -16px auto 20px; transform: translateX(-75px); padding-left: 16px; font-size: 12px; color: #888; }
+
+  html { scroll-behavior: smooth; }
+  .dataset-section { max-width: 900px; margin: 60px auto 40px; padding: 30px; background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 5px solid #3b82f6; scroll-margin-top: 40px; }
+  .dataset-section h3 { margin-top: 0; color: #333; font-size: 20px; }
+  .dataset-section p { color: #555; line-height: 1.6; font-size: 15px; margin-bottom: 20px; }
+  .btn-external { display: inline-block; padding: 8px 16px; background: #f1f5f9; color: #3b82f6; text-decoration: none; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; transition: all 0.2s; }
+  .btn-external:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+  @keyframes highlightFlash { 0% { background-color: #eff6ff; box-shadow: 0 0 0 0 rgba(59,130,246,0.4); } 100% { background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); } }
+  .dataset-section:target { animation: highlightFlash 2s ease-out; }
+</style>
+</head>
+<body>
+
+  <!-- 新增的标题与简介区 -->
+  <header>
+    <h1><span class="brand">ADRE-Net:</span> Adaptive Dual-Resolution Enhancement Network for OCT Segmentation</h1>
+    <p class="intro">
+      ADRE-Net jointly segments retinal layers and pathological fluid in OCT. Its dual-directional attention block (DDAB) models vertical context within each A-scan and horizontal relationships across the B-scan, guided by label-derived anatomical priors.
+    </p>
+    <a class="btn" href="https://github.com/NuistAI/ADRE-Net.git" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+      Code (PyTorch)
+    </a>
+  </header>
+
+  <!-- 主标题 + 子小节标题 -->
+  <h2 class="main-title">Interactive Visualization</h2>
+
+  <div class="sub" style="display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <span>💡 <strong>Tip:</strong></span>
+
+    <span style="display: inline-flex; align-items: center; gap: 4px;">
+      <!-- 悬停图标 (小手) -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      Hover to explore
+    </span>
+    <span>·</span>
+
+    <span style="display: inline-flex; align-items: center; gap: 4px;">
+      <!-- 鼠标点击图标 -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="7"></rect><path d="M12 2v6"></path><path d="M5 10h14"></path></svg>
+      Click to fix position
+    </span>
+    <span>·</span>
+
+    <span style="display: inline-flex; align-items: center; gap: 4px;">
+      <!-- 恢复图标 -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+      Re-enter to resume
+    </span>
+  </div>
+
+  <!-- 水平(列间)注意力小节 -->
+  <h2 class="section-title" id="hTitle">Label-Guided Inter-Column Horizontal Self-Attention (IHSA)</h2>
+  <div id="hmain">
+    <div id="hThumbCol">
+      <div class="thumb active" id="hThumbD" data-ds="dme">
+        <img src="dme_orig.png" alt="DME">
+        <div class="thumb-label">DME</div>
+      </div>
+      <div class="thumb" id="hThumbN" data-ds="nAMD">
+        <img src="orig.png" alt="nAMD">
+        <div class="thumb-label">nAMD</div>
+      </div>
+      <div class="thumb" id="hThumbH" data-ds="normal">
+        <img src="hcms_orig.png" alt="normal">
+        <div class="thumb-label">Normal</div>
+      </div>
+    </div>
+    <div class="hpanel">
+      <div class="t">Original OCT B-scan</div>
+      <div class="hpanelwrap">
+        <canvas id="hcmsOrigCanvas" width="224" height="224"></canvas>
+        <div id="hcmsOrigColLab"></div>
+        <div class="gt-mouse-icon" id="hcmsOrigMouseIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 2 v5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="hpanel">
+      <div class="t">Ground Truth</div>
+      <div class="hpanelwrap">
+        <canvas id="hcmsGtCanvas" width="224" height="224"></canvas>
+        <div id="hcmsGtColLab"></div>
+        <div class="gt-mouse-icon" id="hcmsGtMouseIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 2 v5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="hpanel" id="hPanelAttn">
+      <div class="t">Attention Matrix</div>
+      <div class="hpanelwrap" id="hAttnWrap">
+        <canvas id="hAttnCanvas" width="252" height="252"></canvas>
+        <div class="haxq">Query</div>
+        <div class="haxk">Key</div>
+        <div class="gt-mouse-icon" id="hAttnMouseIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 2 v5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="hpanel" id="hPanelSpatial">
+      <div class="t">Spatial Mapping</div>
+      <div class="hpanelwrap">
+        <canvas id="hSpatialCanvas" width="224" height="224"></canvas>
+        <div id="hSpatialQLab"><span class="lab-l">Q&nbsp;(A-scan&nbsp;</span><span class="lab-r">0</span>)</div>
+        <div class="gt-mouse-icon" id="hSpatialMouseIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 2 v5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="barwrap" id="hBarWrap">
+      <canvas id="hColorbar" width="16" height="224"></canvas>
+      <div class="barlab" id="hHighLab">high</div>
+      <div class="barlab" id="hLowLab">low</div>
+    </div>
+  </div>
+
+  <div id="hLegend"></div>
+
+  <h2 class="section-title" id="vTitle">Label-Guided Intra-column Vertical Self-Attention (IVSA)</h2>
+
+  <!-- 原有的可视化演示区 -->
+  <div id="main">
+    <div class="t"></div>
+    <div class="t">Original OCT B-scan</div>
+    <div class="t">Ground Truth</div>
+    <div class="t" id="titleCol">Attention Matrix</div>
+    <div class="t" id="titleDepth">Spatial Mapping</div>
+    <div class="t"></div>
+
+    <div id="thumbCol">
+      <div class="thumb active" id="thumbD" data-ds="dme">
+        <img src="dme_orig.png" alt="DME">
+        <div class="thumb-label">DME</div>
+      </div>
+      <div class="thumb" id="thumbN" data-ds="nAMD">
+        <img src="orig.png" alt="nAMD">
+        <div class="thumb-label">nAMD</div>
+      </div>
+      <div class="thumb" id="thumbH" data-ds="normal">
+        <img src="hcms_orig.png" alt="normal">
+        <div class="thumb-label">normal</div>
+      </div>
+    </div>
+    <div class="panelwrap" id="origWrap">
+      <canvas id="origCanvas" width="224" height="224"></canvas>
+      <div class="lbl collab" id="origColLab"></div>
+      <div class="lbl rowlab" id="origRowLab"></div>
+      <div class="gt-mouse-icon" id="origMouseIcon">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+          <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+            <path d="M12 2 v5"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="panelwrap" id="gtWrap">
+      <canvas id="gtCanvas" width="224" height="224"></canvas>
+      <div class="lbl collab" id="gtColLab"></div>
+      <div class="lbl rowlab" id="gtRowLab"></div>
+      <div class="gt-mouse-icon" id="gtMouseIcon">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+          <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+            <path d="M12 2 v5"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="colwrap">
+      <div class="ax axq">Query</div>
+      <div class="ax axk">Key</div>
+      <div class="ax axscan" id="colScanLab"><span class="lab-l">(A-scan&nbsp;</span><span class="lab-r">0)</span></div>
+      <canvas id="colCanvas" width="248" height="248"></canvas>
+      <div class="gt-mouse-icon" id="colMouseIcon">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+          <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+            <path d="M12 2 v5"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="panelwrap" id="depthWrap">
+      <canvas id="depthCanvas" width="224" height="248"></canvas>
+      <div class="ax axdepth" id="depthScanLab"><span class="lab-l">(depth&nbsp;</span><span class="lab-r">0)</span></div>
+      <div class="lbl collab" id="depthColLab"></div>
+      <div class="lbl rowlab" id="depthRowLab"></div>
+      <div id="depthQLab">Q</div>
+      <div class="gt-mouse-icon" id="depthMouseIcon">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+          <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+            <path d="M12 2 v5"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="barwrap">
+      <canvas id="colorbar" width="16" height="224"></canvas>
+      <div class="barlab" id="highLab">high</div>
+      <div class="barlab" id="lowLab">low</div>
+    </div>
+  </div>
+
+  <div id="legend"></div>
+
+  <h2 class="main-title">Qualitative Comparison of Segmentation Results</h2>
+
+  <div class="qual-head">
+    <h2 class="section-title">Duke DME Dataset</h2>
+  </div>
+  <div class="qual-ds-url"><strong>Source URL:</strong> https://people.duke.edu/~sf59/Chiu_BOE_2014_dataset.htm</div>
+  <div class="qual-wrapper" data-ds="duke">
+    <div class="qual-fixed">
+      <div class="qual-fixed-row">
+        <div class="qual-box"><div class="qual-img" style="background-position:0 0"></div></div>
+        <div class="qual-box"><div class="qual-img" style="background-position:-64px 0"></div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px 0"></div></div>
+      </div>
+      <div class="qual-fixed-row">
+        <div class="qual-box"><div class="qual-img" style="background-position:0 -64px"></div></div>
+        <div class="qual-box"><div class="qual-img" style="background-position:-64px -64px"></div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px -64px"></div></div>
+      </div>
+      <div class="qual-fixed-row">
+        <div class="qual-box"><div class="qual-img" style="background-position:0 -128px"></div><div class="qual-name">Image</div></div>
+        <div class="qual-box"><div class="qual-img" style="background-position:-64px -128px"></div><div class="qual-name">GT</div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px -128px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
+      </div>
+    </div>
+    <div class="qual-right-panel">
+      <div class="qual-tabs">
+        <button class="qual-tab-btn active" onmouseenter="switchModelTab('cnn', event)">CNN</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('trans', event)">Transformer</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('mamba', event)">Mamba</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('oct', event)">OCT-specific</button>
+      </div>
+      <div class="qual-scroll" id="dukeModelList"></div>
+    </div>
+  </div>
+
+  <div class="qual-head" style="margin-top: 40px;">
+    <h2 class="section-title">AROI Dataset</h2>
+  </div>
+  <div class="qual-ds-url"><strong>Source URL:</strong> https://ipg.fer.hr/ipg/resources/oct_image_database</div>
+  <div class="qual-wrapper" data-ds="aroi">
+    <div class="qual-fixed">
+      <div class="qual-fixed-row">
+        <div class="qual-box"><div class="qual-img" style="background-position:0 0"></div></div>
+        <div class="qual-box"><div class="qual-img" style="background-position:-64px 0"></div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px 0"></div></div>
+      </div>
+      <div class="qual-fixed-row">
+        <div class="qual-box"><div class="qual-img" style="background-position:0 -64px"></div><div class="qual-name">Image</div></div>
+        <div class="qual-box"><div class="qual-img" style="background-position:-64px -64px"></div><div class="qual-name">GT</div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px -64px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
+      </div>
+    </div>
+    <div class="qual-right-panel">
+      <div class="qual-tabs">
+        <button class="qual-tab-btn active" onmouseenter="switchModelTab('cnn', event)">CNN</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('trans', event)">Transformer</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('mamba', event)">Mamba</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('oct', event)">OCT-specific</button>
+      </div>
+      <div class="qual-scroll" id="aroiModelList"></div>
+    </div>
+  </div>
+
+  <div class="qual-head" style="margin-top: 40px;">
+    <h2 class="section-title">HCMS Dataset</h2>
+  </div>
+  <div class="qual-ds-url"><strong>Source URL:</strong> https://iacl.ece.jhu.edu/index.php?title=Resources</div>
+  <div class="qual-wrapper" data-ds="hcms">
+    <div class="qual-fixed">
+      <div class="qual-fixed-row">
+        <div class="qual-box"><div class="qual-img" style="background-position:0 0"></div></div>
+        <div class="qual-box"><div class="qual-img" style="background-position:-64px 0"></div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px 0"></div></div>
+      </div>
+      <div class="qual-fixed-row">
+        <div class="qual-box"><div class="qual-img" style="background-position:0 -64px"></div><div class="qual-name">Image</div></div>
+        <div class="qual-box"><div class="qual-img" style="background-position:-64px -64px"></div><div class="qual-name">GT</div></div>
+        <div class="qual-box ours"><div class="qual-img" style="background-position:-128px -64px"></div><div class="qual-name">ADRE-Net (Ours)</div></div>
+      </div>
+    </div>
+    <div class="qual-right-panel">
+      <div class="qual-tabs">
+        <button class="qual-tab-btn active" onmouseenter="switchModelTab('cnn', event)">CNN</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('trans', event)">Transformer</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('mamba', event)">Mamba</button>
+        <button class="qual-tab-btn" onmouseenter="switchModelTab('oct', event)">OCT-specific</button>
+      </div>
+      <div class="qual-scroll" id="hcmsModelList"></div>
+    </div>
+  </div>
+
+  <div class="qual-refs">
+    <div class="qual-refs-title">References</div>
+    <ol>
+      <li>Ronneberger O, Fischer P, Brox T. U-Net: Convolutional networks for biomedical image segmentation. <i>MICCAI</i>, 2015.</li>
+      <li>Chen L-C, Zhu Y, Papandreou G, et al. Encoder-decoder with atrous separable convolution for semantic image segmentation. <i>ECCV</i>, 2018.</li>
+      <li>Huang H, Lin L, Tong R, et al. UNet 3+: A full-scale connected UNet for medical image segmentation. <i>ICASSP</i>, 2020.</li>
+      <li>Chen J, Lu Y, Yu Q, et al. TransUNet: Transformers make strong encoders for medical image segmentation. <i>arXiv:2102.04306</i>, 2021.</li>
+      <li>Liu X, Gao P, Yu T, Wang L, Yuan Y. CSWin-UNet: Transformer UNet with cross-shaped windows for medical image segmentation. <i>Information Fusion</i>, 2025.</li>
+      <li>Qiu P, Yang J, Kumar S, Ghosh S, Sotiras A. AgileFormer: Spatially agile and scalable transformer for medical image segmentation. <i>Biomedical Signal Processing and Control</i>, 2026.</li>
+      <li>Wang Z, Zheng J-Q, Zhang Y, et al. Mamba-UNet: UNet-like pure visual Mamba for medical image segmentation. <i>arXiv:2402.05079</i>, 2024.</li>
+      <li>Liu J, Yang H, Zhou H-Y, et al. Swin-UMamba: Mamba-based UNet with ImageNet-based pretraining. <i>arXiv:2402.03302</i>, 2024.</li>
+      <li>Zhang Z, Ma Q, Zhang T, et al. Switch-UMamba: Dynamic scanning vision Mamba UNet for medical image segmentation. <i>Medical Image Analysis</i>, 2026.</li>
+      <li>Roy AG, Conjeti S, Karri SPK, et al. ReLayNet: Retinal layer and fluid segmentation of macular OCT using fully convolutional networks. <i>Biomedical Optics Express</i>, 2017.</li>
+      <li>Tan Y, Shen W-D, Wu M-Y, et al. Retinal layer segmentation in OCT images with boundary regression and feature polarization. <i>IEEE Transactions on Medical Imaging</i>, 2024.</li>
+      <li>Cao G, Zhou Z, Wu Y, et al. GCN-enhanced spatial-spectral dual-encoder network for simultaneous segmentation of retinal layers and fluid in OCT images. <i>Biomedical Signal Processing and Control</i>, 2024.</li>
+    </ol>
+  </div>
+
+  <script src="data.js?v=156"></script>
+  <script src="app.js?v=183"></script>
+</body>
+</html>
