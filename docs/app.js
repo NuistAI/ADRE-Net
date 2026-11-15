@@ -1181,13 +1181,19 @@ function startHAutoAnim() {
   const left = center - sweepHalf;          // 左端
   const right = center + sweepHalf;         // 右端
   let col = left;                           // 从左开始
+  let dir = 1;                              // 1=向右, -1=向左
   const step = () => {
     if (hAutoAnimStopped) return;
     hCol = col;
     renderHCol();
-    col += 1;
-    if (col > right) {                      // 扫到右端, 换下一个样本
+    col += dir;
+    if (col > right) {                      // 到右端: 换样本并掉头向左
+      col = right;
+      dir = -1;
+      autoAdvanceHDataset();
+    } else if (col < left) {                // 到左端: 换样本并掉头向右
       col = left;
+      dir = 1;
       autoAdvanceHDataset();
     }
     hAutoAnimRAF = requestAnimationFrame(step);
