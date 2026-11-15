@@ -1114,13 +1114,15 @@ function stopHAutoAnim() {
 
 function startHAutoAnim() {
   if (hAutoAnimStopped) return;
-  let col = hCol;
+  const sweepHalf = 50;                    // 扫动半范围 50px (总范围 100px)
+  const center = Math.round(RES / 2);      // 中心列 (112)
+  let col = center;
   let dir = 1;
   const step = () => {
     if (hAutoAnimStopped) return;
     col += dir;
-    if (col >= RES - 1) { col = RES - 1; dir = -1; }
-    else if (col <= 0) { col = 0; dir = 1; }
+    if (col >= center + sweepHalf) { col = center + sweepHalf; dir = -1; }
+    else if (col <= center - sweepHalf) { col = center - sweepHalf; dir = 1; }
     hCol = col;
     renderHCol();
     hAutoAnimRAF = requestAnimationFrame(step);
