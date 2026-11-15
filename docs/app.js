@@ -1067,9 +1067,15 @@ function ensureHDataset(key) {
   return HDATASET_PROMISES[key];
 }
 
-// —— 自动动: 加载后锚点自动扫动, 鼠标首次介入即停止(此后不再自动动) ——
-let autoAnimStopped = false;
-let autoAnimRAF = null;
+// —— IVSA 自动动: 加载后锚点自动扫动, 鼠标划过后暂停, 静息 5 秒后恢复 ——
+const AUTO_PERIM = 8 * AUTO_ANIM_S;      // 正方形周长
+const AUTO_HALF = AUTO_PERIM / 2;        // 半个周长
+let autoPaused = false;
+let autoStarted = false;
+let autoRAF = null;
+let autoResumeTimer = null;
+let autoP = 0;
+let autoNextSwitchAt = 0;
 
 const AUTO_DATASETS = ['dme', 'nAMD', 'normal'];
 let autoDatasetIdx = 0;      // 当前显示的样本 (dme)
@@ -1077,13 +1083,12 @@ let autoSwitching = false;
 
 // 换到下一个样本 (不重置锚点位置, 动画继续)
 async function autoAdvanceDataset() {
-  if (autoSwitching || autoAnimStopped) return;
+  if (autoSwitching) return;
   autoSwitching = true;
   try {
     autoDatasetIdx = (autoDatasetIdx + 1) % AUTO_DATASETS.length;
     const key = AUTO_DATASETS[autoDatasetIdx];
     const d = await ensureDataset(key);
-    if (autoAnimStopped) return;
     origImg = d.origImg; gtImg = d.gtImg; rowMaps = d.rowMaps; colMaps = d.colMaps; gtData = d.gtData;
     curDataset = key;
     document.getElementById('thumbD').classList.toggle('active', key === 'dme');
@@ -1097,48 +1102,62 @@ async function autoAdvanceDataset() {
   }
 }
 
-function stopAutoAnim() {
-  if (autoAnimStopped) return;
-  autoAnimStopped = true;
-  if (autoAnimRAF) { cancelAnimationFrame(autoAnimRAF); autoAnimRAF = null; }
+function autoStep() {
+  autoRAF = requestAnimationFrame(autoStep);
+  if (autoPaused) return;
+  const cx = DEFAULT_COL;
+  const cy = DEFAULT_ROW;
+  const s = AUTO_ANIM_S;
+  autoP += 1;
+  if (autoP >= autoNextSwitchAt) {
+    autoNextSwitchAt += AUTO_HALF;   // 之后每转半圈切换一次
+    autoAdvanceDataset();
+  }
+  const r = autoP % AUTO_PERIM;
+  let col, row;
+  if (r < 2 * s) {                 // 上边: 向右
+    col = cx - s + r; row = cy - s;
+  } else if (r < 4 * s) {          // 右边: 向下
+    col = cx + s; row = cy - s + (r - 2 * s);
+  } else if (r < 6 * s) {          // 下边: 向左
+    col = cx + s - (r - 4 * s); row = cy + s;
+  } else {                          // 左边: 向上
+    col = cx - s; row = cy + s - (r - 6 * s);
+  }
+  updateHover(clamp(Math.round(col), 0, RES - 1), clamp(Math.round(row), 0, RES - 1));
 }
 
 function startAutoAnim() {
-  if (autoAnimStopped) return;
-  const cx = DEFAULT_COL;   // 正方形中心列
-  const cy = DEFAULT_ROW;   // 正方形中心行
-  const s = AUTO_ANIM_S;    // 半边长 (小正方形)
-  const perim = 8 * s;      // 周长
-  const half = perim / 2;   // 半个周长
-  let p = 0;                // 累计沿周长位置
-  let nextSwitchAt = 2 * perim;   // 先在 DME 上转满 2 圈再切换
-  const step = () => {
-    if (autoAnimStopped) return;
-    p += 1;
-    if (p >= nextSwitchAt) {
-      nextSwitchAt += half;        // 之后每转半圈切换一次
-      autoAdvanceDataset();
-    }
-    const r = p % perim;
-    let col, row;
-    if (r < 2 * s) {                 // 上边: 向右
-      col = cx - s + r; row = cy - s;
-    } else if (r < 4 * s) {          // 右边: 向下
-      col = cx + s; row = cy - s + (r - 2 * s);
-    } else if (r < 6 * s) {          // 下边: 向左
-      col = cx + s - (r - 4 * s); row = cy + s;
-    } else {                          // 左边: 向上
-      col = cx - s; row = cy + s - (r - 6 * s);
-    }
-    updateHover(clamp(Math.round(col), 0, RES - 1), clamp(Math.round(row), 0, RES - 1));
-    autoAnimRAF = requestAnimationFrame(step);
-  };
-  autoAnimRAF = requestAnimationFrame(step);
+  if (autoStarted) return;
+  autoStarted = true;
+  autoP = 0;
+  autoNextSwitchAt = 2 * AUTO_PERIM;   // 先在 DME 上转满 2 圈再切换
+  autoPaused = false;
+  autoRAF = requestAnimationFrame(autoStep);
 }
 
-// —— IHSA 自动动: 加载后选中列左右扫动, 鼠标首次介入即停止 ——
-let hAutoAnimStopped = false;
-let hAutoAnimRAF = null;
+function pauseAutoAnim() {
+  autoPaused = true;
+  if (autoResumeTimer) { clearTimeout(autoResumeTimer); autoResumeTimer = null; }
+}
+
+function scheduleResumeAutoAnim() {
+  if (autoResumeTimer) clearTimeout(autoResumeTimer);
+  autoResumeTimer = setTimeout(() => {
+    autoResumeTimer = null;
+    autoPaused = false;
+  }, 5000);
+}
+
+// —— IHSA 自动动: 加载后选中列左右扫动, 鼠标划过后暂停, 静息 5 秒后恢复 ——
+let hAutoPaused = false;
+let hAutoStarted = false;
+let hAutoRAF = null;
+let hAutoResumeTimer = null;
+let hAutoDist = 0;
+let hAutoCol = H_SWEEP_LEFT;
+let hAutoDir = 1;
+let hAutoNextSwitchAt = 0;
 
 const H_AUTO_DATASETS = ['dme', 'nAMD', 'normal'];
 let hAutoDatasetIdx = 0;      // 当前显示的样本 (dme)
@@ -1146,13 +1165,12 @@ let hAutoSwitching = false;
 
 // 换到下一个样本 (水平小节, 不重置选中列)
 async function autoAdvanceHDataset() {
-  if (hAutoSwitching || hAutoAnimStopped) return;
+  if (hAutoSwitching) return;
   hAutoSwitching = true;
   try {
     hAutoDatasetIdx = (hAutoDatasetIdx + 1) % H_AUTO_DATASETS.length;
     const key = H_AUTO_DATASETS[hAutoDatasetIdx];
     const d = await ensureHDataset(key);
-    if (hAutoAnimStopped) return;
     hOrigImg = d.origImg; hGtImg = d.gtImg; hAttnU8 = d.attnU8;
     hCurDataset = key;
     hAttnColorCache = null;
@@ -1169,43 +1187,56 @@ async function autoAdvanceHDataset() {
   }
 }
 
-function stopHAutoAnim() {
-  if (hAutoAnimStopped) return;
-  hAutoAnimStopped = true;
-  if (hAutoAnimRAF) { cancelAnimationFrame(hAutoAnimRAF); hAutoAnimRAF = null; }
+function hAutoStep() {
+  hAutoRAF = requestAnimationFrame(hAutoStep);
+  if (hAutoPaused) return;
+  const left = H_SWEEP_LEFT;
+  const right = H_SWEEP_RIGHT;
+  const half = right - left;
+  hCol = hAutoCol;
+  renderHCol();
+  hAutoCol += hAutoDir;
+  hAutoDist += 1;
+  if (hAutoDist >= hAutoNextSwitchAt) {   // 到切换距离: 换样本
+    hAutoNextSwitchAt += half;             // 之后每半程切换一次
+    autoAdvanceHDataset();
+  }
+  if (hAutoCol > right) { hAutoCol = right; hAutoDir = -1; }   // 掉头
+  else if (hAutoCol < left) { hAutoCol = left; hAutoDir = 1; }
 }
 
 function startHAutoAnim() {
-  if (hAutoAnimStopped) return;
-  const left = H_SWEEP_LEFT;
-  const right = H_SWEEP_RIGHT;
-  const half = right - left;               // 半程 (一个方向)
-  const firstSwitchAt = 4 * half;          // 先在 DME 上来回两个回合再切换
-  let dist = 0;                            // 累计扫动距离
-  let col = left;                          // 从左(起始点)开始
-  let dir = 1;                             // 1=向右, -1=向左
-  let nextSwitchAt = firstSwitchAt;
-  const step = () => {
-    if (hAutoAnimStopped) return;
-    hCol = col;
-    renderHCol();
-    col += dir;
-    dist += 1;
-    if (dist >= nextSwitchAt) {            // 到切换距离: 换样本
-      nextSwitchAt += half;                // 之后每半程切换一次
-      autoAdvanceHDataset();
-    }
-    if (col > right) { col = right; dir = -1; }   // 掉头
-    else if (col < left) { col = left; dir = 1; }
-    hAutoAnimRAF = requestAnimationFrame(step);
-  };
-  hAutoAnimRAF = requestAnimationFrame(step);
+  if (hAutoStarted) return;
+  hAutoStarted = true;
+  const half = H_SWEEP_RIGHT - H_SWEEP_LEFT;
+  hAutoDist = 0;
+  hAutoCol = H_SWEEP_LEFT;
+  hAutoDir = 1;
+  hAutoNextSwitchAt = 4 * half;   // 先在 DME 上来回两个回合再切换
+  hAutoPaused = false;
+  hAutoRAF = requestAnimationFrame(hAutoStep);
+}
+
+function pauseHAutoAnim() {
+  hAutoPaused = true;
+  if (hAutoResumeTimer) { clearTimeout(hAutoResumeTimer); hAutoResumeTimer = null; }
+}
+
+function scheduleResumeHAutoAnim() {
+  if (hAutoResumeTimer) clearTimeout(hAutoResumeTimer);
+  hAutoResumeTimer = setTimeout(() => {
+    hAutoResumeTimer = null;
+    hAutoPaused = false;
+  }, 5000);
 }
 
 // 水平(IHSA)小节初始化: 绑定交互 + 启动自动动 (IHSA 数据加载完成后立即调用, 不等 IVSA)
 function setupHorizontalSection() {
   setTimeout(startHAutoAnim, 1000);
-  [hcmsOrigCanvas, hcmsGtCanvas, hAttnCanvas, hSpatialCanvas].forEach(c => c.addEventListener('mouseenter', stopHAutoAnim));
+  [hcmsOrigCanvas, hcmsGtCanvas, hAttnCanvas, hSpatialCanvas].forEach(c => {
+    c.addEventListener('mouseenter', pauseHAutoAnim);
+    c.addEventListener('mouseleave', scheduleResumeHAutoAnim);
+  });
 
   hcmsOrigCanvas.addEventListener('mousemove', onHCol);
   hcmsOrigCanvas.addEventListener('click', onHColPin);
@@ -1291,11 +1322,14 @@ async function init() {
   depthCanvas.style.backgroundImage = 'none';
   updateHover(pinnedCol, pinnedRow);
 
-  // 自动动: 静态 1 秒后开始, 优先保证首个样本快速加载; 鼠标首次进入即停止
+  // 自动动: 静态 1 秒后开始, 鼠标划过后暂停, 静息 5 秒后恢复
   setTimeout(startAutoAnim, 1000);
   [origCanvas, gtCanvas, colCanvas, depthCanvas,
    document.getElementById('thumbD'), document.getElementById('thumbN'), document.getElementById('thumbH')
-  ].forEach(el => el.addEventListener('mouseenter', stopAutoAnim));
+  ].forEach(el => {
+    el.addEventListener('mouseenter', pauseAutoAnim);
+    el.addEventListener('mouseleave', scheduleResumeAutoAnim);
+  });
 
   document.getElementById('thumbD').addEventListener('click', () => setDataset('dme'));
   document.getElementById('thumbN').addEventListener('click', () => setDataset('nAMD'));
