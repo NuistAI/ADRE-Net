@@ -165,7 +165,8 @@
   #legend .item, #hLegend .item { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: #222; }
   #legend .swatch, #hLegend .swatch { width: 10px; height: 10px; border: 1px solid #000; flex: none; }
 
-  #hTitle { width: 540px; margin: 40px auto 28px; }
+  #hTitle { width: 540px; margin: 0 auto 28px; }
+  #vTitle { margin: 40px auto 28px; }
   #hmain { display: grid; grid-template-columns: 28px 112px 112px 112px 112px 24px; column-gap: 8px; justify-content: center; }
   .hpanel { text-align: center; }
   .hpanel .t { margin-bottom: 4px; transform: translateY(-8px); }
@@ -241,7 +242,98 @@
 
   <!-- 主标题 + 子小节标题 -->
   <h2 class="main-title">Interactive Visualization</h2>
-  <h2 class="section-title">Label-Guided Intra-column Vertical Self-Attention (IVSA)</h2>
+  <!-- 水平(列间)注意力小节 -->
+  <h2 class="section-title" id="hTitle">Label-Guided Inter-Column Horizontal Self-Attention (IHSA)</h2>
+  <div id="hmain">
+    <div id="hThumbCol">
+      <div class="thumb active" id="hThumbD" data-ds="dme">
+        <img src="dme_orig.png" alt="DME">
+        <div class="thumb-label">DME</div>
+      </div>
+      <div class="thumb" id="hThumbN" data-ds="nAMD">
+        <img src="orig.png" alt="nAMD">
+        <div class="thumb-label">nAMD</div>
+      </div>
+      <div class="thumb" id="hThumbH" data-ds="normal">
+        <img src="hcms_orig.png" alt="normal">
+        <div class="thumb-label">Normal</div>
+      </div>
+    </div>
+    <div class="hpanel">
+      <div class="t">Original OCT B-scan</div>
+      <div class="hpanelwrap">
+        <canvas id="hcmsOrigCanvas" width="224" height="224"></canvas>
+        <div id="hcmsOrigColLab"></div>
+        <div class="gt-mouse-icon" id="hcmsOrigMouseIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 2 v5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="hpanel">
+      <div class="t">Ground Truth</div>
+      <div class="hpanelwrap">
+        <canvas id="hcmsGtCanvas" width="224" height="224"></canvas>
+        <div id="hcmsGtColLab"></div>
+        <div class="gt-mouse-icon" id="hcmsGtMouseIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 2 v5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="hpanel" id="hPanelAttn">
+      <div class="t">Attention Matrix</div>
+      <div class="hpanelwrap" id="hAttnWrap">
+        <canvas id="hAttnCanvas" width="252" height="252"></canvas>
+        <div class="haxq">Query</div>
+        <div class="haxk">Key</div>
+        <div class="gt-mouse-icon" id="hAttnMouseIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 2 v5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="hpanel" id="hPanelSpatial">
+      <div class="t">Spatial Mapping</div>
+      <div class="hpanelwrap">
+        <canvas id="hSpatialCanvas" width="224" height="224"></canvas>
+        <div id="hSpatialQLab"><span class="lab-l">Q&nbsp;(A-scan&nbsp;</span><span class="lab-r">0</span>)</div>
+        <div class="gt-mouse-icon" id="hSpatialMouseIcon">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
+              <path d="M12 2 v5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="barwrap" id="hBarWrap">
+      <canvas id="hColorbar" width="16" height="224"></canvas>
+      <div class="barlab" id="hHighLab">high</div>
+      <div class="barlab" id="hLowLab">low</div>
+    </div>
+  </div>
+
+  <div id="hLegend"></div>
+
+  <h2 class="section-title" id="vTitle">Label-Guided Intra-column Vertical Self-Attention (IVSA)</h2>
 
   <div class="sub" style="display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;">
     <span>💡 <strong>Tip:</strong></span>
@@ -357,97 +449,6 @@
   </div>
 
   <div id="legend"></div>
-
-  <!-- 水平(列间)注意力小节 -->
-  <h2 class="section-title" id="hTitle">Label-Guided Inter-Column Horizontal Self-Attention (IHSA)</h2>
-  <div id="hmain">
-    <div id="hThumbCol">
-      <div class="thumb active" id="hThumbD" data-ds="dme">
-        <img src="dme_orig.png" alt="DME">
-        <div class="thumb-label">DME</div>
-      </div>
-      <div class="thumb" id="hThumbN" data-ds="nAMD">
-        <img src="orig.png" alt="nAMD">
-        <div class="thumb-label">nAMD</div>
-      </div>
-      <div class="thumb" id="hThumbH" data-ds="normal">
-        <img src="hcms_orig.png" alt="normal">
-        <div class="thumb-label">Normal</div>
-      </div>
-    </div>
-    <div class="hpanel">
-      <div class="t">Original OCT B-scan</div>
-      <div class="hpanelwrap">
-        <canvas id="hcmsOrigCanvas" width="224" height="224"></canvas>
-        <div id="hcmsOrigColLab"></div>
-        <div class="gt-mouse-icon" id="hcmsOrigMouseIcon">
-          <svg width="20" height="20" viewBox="0 0 24 24">
-            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
-            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
-              <path d="M12 2 v5"/>
-            </g>
-          </svg>
-        </div>
-      </div>
-    </div>
-    <div class="hpanel">
-      <div class="t">Ground Truth</div>
-      <div class="hpanelwrap">
-        <canvas id="hcmsGtCanvas" width="224" height="224"></canvas>
-        <div id="hcmsGtColLab"></div>
-        <div class="gt-mouse-icon" id="hcmsGtMouseIcon">
-          <svg width="20" height="20" viewBox="0 0 24 24">
-            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
-            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
-              <path d="M12 2 v5"/>
-            </g>
-          </svg>
-        </div>
-      </div>
-    </div>
-    <div class="hpanel" id="hPanelAttn">
-      <div class="t">Attention Matrix</div>
-      <div class="hpanelwrap" id="hAttnWrap">
-        <canvas id="hAttnCanvas" width="252" height="252"></canvas>
-        <div class="haxq">Query</div>
-        <div class="haxk">Key</div>
-        <div class="gt-mouse-icon" id="hAttnMouseIcon">
-          <svg width="20" height="20" viewBox="0 0 24 24">
-            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
-            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
-              <path d="M12 2 v5"/>
-            </g>
-          </svg>
-        </div>
-      </div>
-    </div>
-    <div class="hpanel" id="hPanelSpatial">
-      <div class="t">Spatial Mapping</div>
-      <div class="hpanelwrap">
-        <canvas id="hSpatialCanvas" width="224" height="224"></canvas>
-        <div id="hSpatialQLab"><span class="lab-l">Q&nbsp;(A-scan&nbsp;</span><span class="lab-r">0</span>)</div>
-        <div class="gt-mouse-icon" id="hSpatialMouseIcon">
-          <svg width="20" height="20" viewBox="0 0 24 24">
-            <path d="M19 10 V7 a7 7 0 0 0 -14 0 v3 a7 7 0 0 0 14 0 Z" fill="#ececec" stroke="#444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 7 v3" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round"/>
-            <g class="gt-btn" fill="none" stroke="#444" stroke-width="1.6" stroke-linecap="round">
-              <path d="M12 2 v5"/>
-            </g>
-          </svg>
-        </div>
-      </div>
-    </div>
-    <div class="barwrap" id="hBarWrap">
-      <canvas id="hColorbar" width="16" height="224"></canvas>
-      <div class="barlab" id="hHighLab">high</div>
-      <div class="barlab" id="hLowLab">low</div>
-    </div>
-  </div>
-
-  <div id="hLegend"></div>
 
   <h2 class="main-title">Qualitative Comparison of Segmentation Results</h2>
 
