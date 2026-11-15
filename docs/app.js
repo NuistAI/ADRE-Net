@@ -1139,6 +1139,35 @@ function startAutoAnim() {
 let hAutoAnimStopped = false;
 let hAutoAnimRAF = null;
 
+const H_AUTO_DATASETS = ['dme', 'nAMD', 'normal'];
+let hAutoDatasetIdx = 0;      // 当前显示的样本 (dme)
+let hAutoSwitching = false;
+
+// 换到下一个样本 (水平小节, 不重置选中列)
+async function autoAdvanceHDataset() {
+  if (hAutoSwitching || hAutoAnimStopped) return;
+  hAutoSwitching = true;
+  try {
+    hAutoDatasetIdx = (hAutoDatasetIdx + 1) % H_AUTO_DATASETS.length;
+    const key = H_AUTO_DATASETS[hAutoDatasetIdx];
+    const d = await ensureHDataset(key);
+    if (hAutoAnimStopped) return;
+    hOrigImg = d.origImg; hGtImg = d.gtImg; hAttnU8 = d.attnU8;
+    hCurDataset = key;
+    hAttnColorCache = null;
+    hGtStripH = computeGtStrip(d.gtImg);
+    hGtStripV = transposeStrip(hGtStripH);
+    document.getElementById('hThumbD').classList.toggle('active', key === 'dme');
+    document.getElementById('hThumbN').classList.toggle('active', key === 'nAMD');
+    document.getElementById('hThumbH').classList.toggle('active', key === 'normal');
+    buildLegend(legendFor(key), 'hLegend');
+  } catch (e) {
+    console.warn('auto advance (horizontal) failed:', e.message);
+  } finally {
+    hAutoSwitching = false;
+  }
+}
+
 function stopHAutoAnim() {
   if (hAutoAnimStopped) return;
   hAutoAnimStopped = true;
@@ -1149,15 +1178,18 @@ function startHAutoAnim() {
   if (hAutoAnimStopped) return;
   const sweepHalf = 100;                   // 扫动半范围 100px (总范围 200px)
   const center = Math.round(RES / 2);      // 中心列 (112)
-  let col = center;
-  let dir = 1;
+  const left = center - sweepHalf;          // 左端
+  const right = center + sweepHalf;         // 右端
+  let col = left;                           // 从左开始
   const step = () => {
     if (hAutoAnimStopped) return;
-    col += dir;
-    if (col >= center + sweepHalf) { col = center + sweepHalf; dir = -1; }
-    else if (col <= center - sweepHalf) { col = center - sweepHalf; dir = 1; }
     hCol = col;
     renderHCol();
+    col += 1;
+    if (col > right) {                      // 扫到右端, 换下一个样本
+      col = left;
+      autoAdvanceHDataset();
+    }
     hAutoAnimRAF = requestAnimationFrame(step);
   };
   hAutoAnimRAF = requestAnimationFrame(step);
