@@ -693,9 +693,12 @@ function legendFor(key) {
 }
 
 // 水平(列间)注意力小节: 切换数据集(dme/nAMD/normal)
-function setHDataset(key) {
+let hDatasetReq = 0;
+async function setHDataset(key) {
+  const req = ++hDatasetReq;
   hCurDataset = key;
-  const d = HDATASETS[key];
+  const d = await ensureHDataset(key);
+  if (req !== hDatasetReq) return;   // 期间有更新的切换请求, 放弃本次渲染
   hOrigImg = d.origImg; hGtImg = d.gtImg; hAttnU8 = d.attnU8;
   hAttnColorCache = null;
   hGtStripH = computeGtStrip(d.gtImg);
@@ -877,9 +880,12 @@ function onHAttnPin(e) {
   mouseIconClick(e.currentTarget);
 }
 
-function setDataset(key) {
+let datasetReq = 0;
+async function setDataset(key) {
+  const req = ++datasetReq;
   curDataset = key;
-  const d = DATASETS[key];
+  const d = await ensureDataset(key);
+  if (req !== datasetReq) return;   // 期间有更新的切换请求, 放弃本次渲染
   origImg = d.origImg; gtImg = d.gtImg; rowMaps = d.rowMaps; colMaps = d.colMaps; gtData = d.gtData;
   document.getElementById('thumbD').classList.toggle('active', key === 'dme');
   document.getElementById('thumbN').classList.toggle('active', key === 'nAMD');
@@ -995,33 +1001,76 @@ function switchModelTab(category, event) {
   renderQualList(ds, category);
 }
 
-async function init() {
-  const [orig, gt, rm, cm] = await Promise.all([
-    loadImage('orig.png'),
-    loadImage('gt.png'),
-    loadBinGz('row_maps.bin'),
-    loadBinGz('col_maps.bin'),
-  ]);
-  const [ho, hg, hrm, hcm] = await Promise.all([
-    loadImage('hcms_orig.png'),
-    loadImage('hcms_gt.png'),
-    loadBinGz('hcms_row_maps.bin'),
-    loadBinGz('hcms_col_maps.bin'),
-  ]);
-  const [do_, dg, drm, dcm] = await Promise.all([
-    loadImage('dme_orig.png'),
-    loadImage('dme_gt.png'),
-    loadBinGz('dme_row_maps.bin'),
-    loadBinGz('dme_col_maps.bin'),
-  ]);
-  DATASETS.dme = { origImg: do_, gtImg: dg, rowMaps: drm, colMaps: dcm, gtData: getImgData(dg, RES, RES).data };
-  DATASETS.nAMD = { origImg: orig, gtImg: gt, rowMaps: rm, colMaps: cm, gtData: getImgData(gt, RES, RES).data };
-  DATASETS.normal = { origImg: ho, gtImg: hg, rowMaps: hrm, colMaps: hcm, gtData: getImgData(hg, RES, RES).data };
+// —— 懒加载: 各数据集的加载器 + Promise 缓存 ——
+const VERTICAL_LOADERS = {
+  dme: async () => {
+    const [o, g, rm, cm] = await Promise.all([
+      loadImage('dme_orig.png'), loadImage('dme_gt.png'),
+      loadBinGz('dme_row_maps.bin'), loadBinGz('dme_col_maps.bin'),
+    ]);
+    return { origImg: o, gtImg: g, rowMaps: rm, colMaps: cm, gtData: getImgData(g, RES, RES).data };
+  },
+  nAMD: async () => {
+    const [o, g, rm, cm] = await Promise.all([
+      loadImage('orig.png'), loadImage('gt.png'),
+      loadBinGz('row_maps.bin'), loadBinGz('col_maps.bin'),
+    ]);
+    return { origImg: o, gtImg: g, rowMaps: rm, colMaps: cm, gtData: getImgData(g, RES, RES).data };
+  },
+  normal: async () => {
+    const [o, g, rm, cm] = await Promise.all([
+      loadImage('hcms_orig.png'), loadImage('hcms_gt.png'),
+      loadBinGz('hcms_row_maps.bin'), loadBinGz('hcms_col_maps.bin'),
+    ]);
+    return { origImg: o, gtImg: g, rowMaps: rm, colMaps: cm, gtData: getImgData(g, RES, RES).data };
+  },
+};
 
+const HORIZONTAL_LOADERS = {
+  dme: async () => {
+    const [o, g, a] = await Promise.all([
+      loadImage('dme_orig.png'), loadImage('dme_gt.png'), loadBin('dme_bscan_attn.bin'),
+    ]);
+    return { origImg: o, gtImg: g, attnU8: a };
+  },
+  nAMD: async () => {
+    const [o, g, a] = await Promise.all([
+      loadImage('orig.png'), loadImage('gt.png'), loadBin('aroi_bscan_attn.bin'),
+    ]);
+    return { origImg: o, gtImg: g, attnU8: a };
+  },
+  normal: async () => {
+    const [o, g, a] = await Promise.all([
+      loadImage('hcms_orig.png'), loadImage('hcms_gt.png'), loadBin('bscan_attn.bin'),
+    ]);
+    return { origImg: o, gtImg: g, attnU8: a };
+  },
+};
+
+const DATASET_PROMISES = {};
+function ensureDataset(key) {
+  if (DATASETS[key]) return Promise.resolve(DATASETS[key]);
+  if (!DATASET_PROMISES[key]) {
+    DATASET_PROMISES[key] = VERTICAL_LOADERS[key]().then(d => { DATASETS[key] = d; return d; });
+  }
+  return DATASET_PROMISES[key];
+}
+
+const HDATASET_PROMISES = {};
+function ensureHDataset(key) {
+  if (HDATASETS[key]) return Promise.resolve(HDATASETS[key]);
+  if (!HDATASET_PROMISES[key]) {
+    HDATASET_PROMISES[key] = HORIZONTAL_LOADERS[key]().then(d => { HDATASETS[key] = d; return d; });
+  }
+  return HDATASET_PROMISES[key];
+}
+
+async function init() {
   drawColorbar(cbCtx);
   drawColorbar(hCbCtx);
 
-  setDataset('dme');
+  // 懒加载: 只先加载默认数据集 (dme)
+  await setDataset('dme');
 
   document.getElementById('thumbD').addEventListener('click', () => setDataset('dme'));
   document.getElementById('thumbN').addEventListener('click', () => setDataset('nAMD'));
@@ -1031,25 +1080,8 @@ async function init() {
   document.getElementById('thumbH').addEventListener('mouseenter', () => setDataset('normal'));
 
   try {
-    const [hOrig, hGt, hAttn] = await Promise.all([
-      loadImage('hcms_orig.png'),
-      loadImage('hcms_gt.png'),
-      loadBin('bscan_attn.bin'),
-    ]);
-    const [aOrig, aGt, aAttn] = await Promise.all([
-      loadImage('orig.png'),
-      loadImage('gt.png'),
-      loadBin('aroi_bscan_attn.bin'),
-    ]);
-    const [dOrig, dGt, dAttn] = await Promise.all([
-      loadImage('dme_orig.png'),
-      loadImage('dme_gt.png'),
-      loadBin('dme_bscan_attn.bin'),
-    ]);
-    HDATASETS.normal = { origImg: hOrig, gtImg: hGt, attnU8: hAttn };
-    HDATASETS.nAMD = { origImg: aOrig, gtImg: aGt, attnU8: aAttn };
-    HDATASETS.dme = { origImg: dOrig, gtImg: dGt, attnU8: dAttn };
-    setHDataset('normal');
+    // 懒加载: 只先加载默认数据集 (normal)
+    await setHDataset('normal');
     hcmsOrigCanvas.addEventListener('mousemove', onHCol);
     hcmsOrigCanvas.addEventListener('click', onHColPin);
     hcmsOrigCanvas.addEventListener('mouseleave', onHColLeave);
