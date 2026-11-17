@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.ipynb_checkpoints/
+
+# Model checkpoints & outputs
+*.pth
+*.pt
+outputs/
+runs/
+checkpoint/
+*.npy
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log

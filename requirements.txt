@@ -1,0 +1,17 @@
+# Core runtime
+torch>=1.13
+numpy
+opencv-python
+pillow
+pyyaml
+tqdm
+pandas
+
+# Data augmentation
+albumentations
+
+# Model / losses
+einops
+
+# Training utilities
+tensorboardx
